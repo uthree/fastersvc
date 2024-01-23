@@ -22,8 +22,9 @@ class MultiScaleSTFTLoss(nn.Module):
         for s in self.scales:
             hop_length = s
             n_fft = s * 4
-            x_spec = torch.stft(x, n_fft, hop_length, return_complex=True).abs()
-            y_spec = torch.stft(y, n_fft, hop_length, return_complex=True).abs()
+            window = torch.hann_window(n_fft, device=x.device)
+            x_spec = torch.stft(x, n_fft, hop_length, return_complex=True, window=window).abs()
+            y_spec = torch.stft(y, n_fft, hop_length, return_complex=True, window=window).abs()
             loss += (x_spec - y_spec).abs().mean() + self.alpha * (safe_log(x_spec) - safe_log(y_spec)).abs().mean()
         return loss
 
