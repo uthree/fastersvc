@@ -108,26 +108,30 @@ class FiLM(nn.Module):
 class Upsample(nn.Module):
     def __init__(self, input_channels, output_channels, cond_channels, factor=4, kernel_size=7, num_layers=3):
         super().__init__()
-        self.film = FiLM(input_channels, cond_channels)
         self.up = nn.ConvTranspose1d(input_channels, input_channels, factor, factor)
         self.up_res = nn.ConvTranspose1d(input_channels, output_channels, factor, factor)
+        self.up_cond = nn.ConvTranspose1d(cond_channels, cond_channels, factor, factor)
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 3)
+        self.film1 = FiLM(input_channels, cond_channels)
         self.c3 = DCC(input_channels, input_channels, 3, 9)
         self.c4 = DCC(input_channels, output_channels, 3, 1)
+        self.film2 = FiLM(output_channels, cond_channels)
 
     def forward(self, x, c):
-        x = self.film(x, c)
         res = self.up_res(x)
+        c = self.up_cond(c)
         x = self.up(x)
         x = F.leaky_relu(x, LRELU_SLOPE)
         x = self.c1(x)
         x = F.leaky_relu(x, LRELU_SLOPE)
         x = self.c2(x)
+        x = self.film1(x, c)
         x = F.leaky_relu(x, LRELU_SLOPE)
         x = self.c3(x)
         x = F.leaky_relu(x, LRELU_SLOPE)
         x = self.c4(x)
+        x = self.film2(x, c)
         return x + res
 
 
