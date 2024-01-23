@@ -9,7 +9,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from module.dataset import WaveFileDirectory
-from module.loss import MultiScaleSTFTLoss
+from module.loss import MultiScaleSTFTLoss, LogMelSpectrogramLoss
 from module.pitch_estimator import PitchEstimator
 from module.content_encoder import ContentEncoder
 from module.speaker_encoder import SpeakerEncoder
@@ -19,6 +19,7 @@ from module.discriminator import Discriminator
 
 WEIGHT_ADV = 2.0
 WEIGHT_FEAT = 2.0
+WEIGHT_MEL = 45.0
 
 parser = argparse.ArgumentParser(description="train voice conversion model")
 
@@ -88,7 +89,8 @@ OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 OptSE = optim.AdamW(SE.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 
-stft_loss = MultiScaleSTFTLoss()
+stft_loss = MultiScaleSTFTLoss().to(device)
+logmel_loss = LogMelSpectrogramLoss().to(device)
 
 # Training
 step_count = 0
@@ -121,7 +123,8 @@ for epoch in range(args.epoch):
                 loss_adv += (logit ** 2).mean()
             loss_feat = Dis.feat_loss(cut_center(fake), cut_center(wave))
             loss_stft = stft_loss(fake, wave)
-            loss_g = loss_stft + loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT
+            loss_mel = logmel_loss(fake, wave)
+            loss_g = loss_stft + loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
@@ -145,7 +148,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Step {step_count}, D: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f}, Feat.: {loss_feat.item():.4f}")
+        tqdm.write(f"Step {step_count}, D: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, Mel.: {loss_mel.item():.4f}, STFT: {loss_stft.item():.4f}, Feat.: {loss_feat.item():.4f}")
 
         bar.update(N)
 
