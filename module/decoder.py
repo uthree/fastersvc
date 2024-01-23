@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from .common import DCC
 
-LRELU_SLOPE = 0.2
+LRELU_SLOPE = 0.1
 
 # Oscillate harmonic signal
 #
@@ -48,14 +48,24 @@ def oscillate_harmonics(f0,
     return harmonics, phi
 
 
+class SDCC(nn.Module):
+    def __init__(self, input_channels, output_channels, kernel_size, dilation):
+        super().__init__()
+        self.c1 = DCC(input_channels, input_channels, kernel_size, dilation)
+        self.c2 = nn.Conv1d(input_channels, output_channels, 1)
+
+    def forward(self, x):
+        return self.c2(self.c1(x))
+
+
 class Downsample(nn.Module):
     def __init__(self, input_channels, output_channels, factor=4):
         super().__init__()
         self.down_res = nn.Conv1d(input_channels, output_channels, factor, factor)
         self.down = nn.Conv1d(input_channels, output_channels, factor, factor)
-        self.c1 = DCC(output_channels, output_channels, 3, 1)
-        self.c2 = DCC(output_channels, output_channels, 3, 2)
-        self.c3 = DCC(output_channels, output_channels, 3, 4)
+        self.c1 = SDCC(output_channels, output_channels, 7, 1)
+        self.c2 = SDCC(output_channels, output_channels, 7, 2)
+        self.c3 = SDCC(output_channels, output_channels, 7, 4)
 
     def forward(self, x):
         res = self.down_res(x)
@@ -109,30 +119,37 @@ class Upsample(nn.Module):
     def __init__(self, input_channels, output_channels, cond_channels, factor=4, kernel_size=7, num_layers=3):
         super().__init__()
         self.up = nn.ConvTranspose1d(input_channels, input_channels, factor, factor)
-        self.up_res = nn.ConvTranspose1d(input_channels, output_channels, factor, factor)
-        self.up_cond = nn.ConvTranspose1d(cond_channels, cond_channels, factor, factor)
-        self.c1 = DCC(input_channels, input_channels, 3, 1)
-        self.c2 = DCC(input_channels, input_channels, 3, 3)
+        self.cond_up = nn.ConvTranspose1d(cond_channels, cond_channels, factor, factor)
+        
+        self.c1 = SDCC(input_channels, input_channels, 7, 1)
+        self.c2 = SDCC(input_channels, input_channels, 7, 3)
         self.film1 = FiLM(input_channels, cond_channels)
-        self.c3 = DCC(input_channels, input_channels, 3, 9)
-        self.c4 = DCC(input_channels, output_channels, 3, 27)
-        self.film2 = FiLM(output_channels, cond_channels)
+
+        self.c3 = SDCC(input_channels, input_channels, 7, 9)
+        self.c4 = SDCC(input_channels, input_channels, 7, 27)
+        self.film2 = FiLM(input_channels, cond_channels)
+
+        self.out_conv = nn.Conv1d(input_channels, output_channels, 1)
 
     def forward(self, x, c):
-        res = self.up_res(x)
-        c = self.up_cond(c)
         x = self.up(x)
+        c = self.cond_up(c)
+        res = x
         x = F.leaky_relu(x, LRELU_SLOPE)
         x = self.c1(x)
         x = F.leaky_relu(x, LRELU_SLOPE)
         x = self.c2(x)
         x = self.film1(x, c)
+        x = x + res
+        res = x
         x = F.leaky_relu(x, LRELU_SLOPE)
         x = self.c3(x)
         x = F.leaky_relu(x, LRELU_SLOPE)
         x = self.c4(x)
         x = self.film2(x, c)
-        return x + res
+        x = x + res
+        x = self.out_conv(x)
+        return x
 
 
 class Decoder(nn.Module):
