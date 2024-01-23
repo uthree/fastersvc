@@ -11,39 +11,82 @@ def get_padding(kernel_size, dilation=1):
     return int((kernel_size*dilation - dilation)/2)
 
 
-class ScaleDiscriminator(nn.Module):
-    def __init__(self, scale):
+class PeriodicDiscriminator(nn.Module):
+    def __init__(self,
+                 channels=32,
+                 period=2,
+                 kernel_size=5,
+                 stride=3,
+                 num_stages=4,
+                 groups = [1, 1, 1, 1, 1],
+                 max_channels=128,
+                 ):
         super().__init__()
-        self.pool = nn.AvgPool1d(scale)
-        convs = [
-            nn.Conv1d(1, 8, 41, 3, 21),
-            nn.Conv1d(8, 16, 41, 3, 21),
-            nn.Conv1d(16, 32, 41, 3, 21),
-            nn.Conv1d(32, 64, 21, 3, 11, groups=2),
-            nn.Conv1d(64, 128, 21, 3, 11, groups=4),
-            nn.Conv1d(128, 256, 21, 3, 11, groups=8),
-            nn.Conv1d(256, 512, 15, 3, 7, groups=16),
-            nn.Conv1d(512, 1, 15, 3, 7)
-            ]
-        self.convs = nn.ModuleList([weight_norm(c) for c in convs])
+        self.input_layer = weight_norm(
+                nn.Conv2d(1, channels, (kernel_size, 1), (stride, 1), padding=get_padding(kernel_size, 1)))
+        self.layers = nn.Sequential()
+        for i in range(num_stages):
+            c = min(channels * (4 ** i), max_channels)
+            c_next = min(channels * (4 ** (i+1)), max_channels)
+            if i == (num_stages - 1):
+                self.layers.append(
+                        weight_norm(
+                            nn.Conv2d(c, c, (kernel_size, 1), (stride, 1), groups=groups[i],
+                                      padding=get_padding(kernel_size, 1))))
+            else:
+                self.layers.append(
+                        weight_norm(
+                            nn.Conv2d(c, c_next, (kernel_size, 1), (stride, 1), groups=groups[i],
+                                      padding=get_padding(kernel_size, 1))))
+                self.layers.append(
+                        nn.LeakyReLU(LRELU_SLOPE))
+        c = min(channels * (4 ** (num_stages-1)), max_channels)
+        self.final_conv = weight_norm(
+                nn.Conv2d(c, c, (5, 1), 1, padding=get_padding(5, 1)))
+        self.final_relu = nn.LeakyReLU(LRELU_SLOPE)
+        self.output_layer = weight_norm(
+                nn.Conv2d(c, 1, (3, 1), 1, padding=get_padding(3, 1)))
+        self.period = period
 
     def forward(self, x):
+        # padding
+        if x.shape[1] % self.period != 0:
+            pad_len = self.period - (x.shape[1] % self.period)
+            x = torch.cat([x, torch.zeros(x.shape[0], pad_len, device=x.device)], dim=1)
+
+        x = x.view(x.shape[0], self.period, -1)
         x = x.unsqueeze(1)
-        x = self.pool(x)
+        x = x.transpose(2, 3)
+        x = self.input_layer(x)
         feats = []
-        for c in self.convs:
-            x = c(x)
-            x = F.leaky_relu(x, LRELU_SLOPE)
-            feats.append(x)
+        for layer in self.layers:
+            x = layer(x)
+            if "Conv" in type(layer).__name__:
+                feats.append(x)
+        x = self.final_conv(x)
+        x = self.final_relu(x)
+        x = self.output_layer(x)
         return x, feats
 
 
-class MultiScaleDiscriminator(nn.Module):
-    def __init__(self, scales=[1, 2, 4]):
+class MultiPeriodicDiscriminator(nn.Module):
+    def __init__(self,
+                 periods=[1, 3, 5, 7, 17, 23, 37],
+                 groups=[1, 4, 4, 4, 4, 4],
+                 channels=32,
+                 kernel_size=5,
+                 stride=3,
+                 num_stages=5):
         super().__init__()
-        self.scales = scales
-        self.sub_discs = nn.ModuleList([ScaleDiscriminator(s) for s in scales])
-    
+        self.sub_discs = nn.ModuleList([])
+        for p in periods:
+            self.sub_discs.append(
+                    PeriodicDiscriminator(channels,
+                                          p,
+                                          kernel_size,
+                                          stride,
+                                          num_stages,
+                                          groups=groups))
     def logits(self, x):
         logits = []
         for sd in self.sub_discs:
@@ -114,12 +157,12 @@ class MultiSTFTDiscriminator(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
-        self.msd = MultiScaleDiscriminator()
+        self.mpd = MultiPeriodicDiscriminator()
         self.mrd = MultiSTFTDiscriminator()
 
     def logits(self, x):
-        return self.msd.logits(x) + self.mrd.logits(x)
+        return self.mpd.logits(x) + self.mrd.logits(x)
 
     def feat_loss(self, x, y):
-        return self.msd.feat_loss(x, y) + self.mrd.feat_loss(x, y)
+        return self.mpd.feat_loss(x, y) + self.mrd.feat_loss(x, y)
 
