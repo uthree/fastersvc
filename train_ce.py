@@ -12,12 +12,12 @@ from tqdm import tqdm
 
 from module.dataset import WaveFileDirectory
 from module.content_encoder import ContentEncoder
-from transformers import HubertModel
+from transformers import HubertForCTC
 
 parser = argparse.ArgumentParser(description="distillation of hubert")
 
 parser.add_argument('dataset')
-parser.add_argument('--hubert', default='rinna/japanese-hubert-base')
+parser.add_argument('--hubert', default='facebook/hubert-large-ls960-ft')
 parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
@@ -56,7 +56,7 @@ scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 
 Opt = optim.RAdam(CE.parameters(), lr=args.learning_rate)
 
-hubert = HubertModel.from_pretrained(args.hubert).to(device).eval()
+hubert = HubertForCTC.from_pretrained(args.hubert).to(device).eval()
 
 # Training
 step_count = 0
@@ -71,16 +71,15 @@ for epoch in range(args.epoch):
         with torch.cuda.amp.autocast(enabled=args.fp16):
             wave_16k = resample(wave, 48000, 16000)
             with torch.no_grad():
-                hubert_features = hubert(wave_16k, output_hidden_states=True).hidden_states[9]
+                hubert_features = torch.softmax(hubert(wave_16k).logits, dim=2)
                 hubert_features = hubert_features.transpose(1, 2)
 
         Opt.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
-            z1, z2 = CE.predict_hubert_features(wave)
-            hubert_features = F.interpolate(hubert_features, z1.shape[2], mode='linear')
-            loss_raw = ((z1 - hubert_features).abs()).mean()
-            loss_cluster = ((z2 - hubert_features).abs()).mean()
-            loss = loss_raw + loss_cluster
+            z = CE.encode(wave)
+            hubert_features = F.interpolate(hubert_features, z.shape[2])
+            loss = (z - hubert_features).abs().mean()
+ 
 
         scaler.scale(loss).backward()
         scaler.step(Opt)
@@ -89,7 +88,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
 
-        tqdm.write(f"Step {step_count}, Raw: {loss_raw.item():.4f}, Cluster: {loss_cluster.item():.4f}")
+        tqdm.write(f"Step {step_count}, loss: {loss.item()}")
 
         bar.update(N)
 

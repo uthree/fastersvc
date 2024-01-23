@@ -3,10 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .common import ResBlock
+from .common import DCC
 
-LRELU_SLOPE = 0.1
-
+LRELU_SLOPE = 0.2
 
 # Oscillate harmonic signal
 #
@@ -50,16 +49,24 @@ def oscillate_harmonics(f0,
 
 
 class Downsample(nn.Module):
-    def __init__(self, input_channels, output_channels, factor=4, kernel_size=7, num_layers=1):
+    def __init__(self, input_channels, output_channels, factor=4):
         super().__init__()
-        self.res_blocks = nn.Sequential(
-                *[ResBlock(input_channels, 7, 1, 1) for _ in range(num_layers)])
+        self.down_res = nn.Conv1d(input_channels, output_channels, factor, factor)
         self.down = nn.Conv1d(input_channels, output_channels, factor, factor)
+        self.c1 = DCC(output_channels, output_channels, 3, 1)
+        self.c2 = DCC(output_channels, output_channels, 3, 2)
+        self.c3 = DCC(output_channels, output_channels, 3, 4)
 
     def forward(self, x):
-        x = self.res_blocks(x)
+        res = self.down_res(x)
         x = self.down(x)
-        return x
+        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = self.c1(x)
+        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = self.c2(x)
+        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = self.c3(x)
+        return x + res
 
 
 class Pitch2Vec(nn.Module):
@@ -86,14 +93,12 @@ class Energy2Vec(nn.Module):
 
 
 class FiLM(nn.Module):
-    def __init__(self, input_channels, output_channels, cond_channels):
+    def __init__(self, channels, cond_channels):
         super().__init__()
-        self.conv = nn.Conv1d(input_channels, output_channels, 1)
-        self.to_mu = nn.Conv1d(cond_channels, output_channels, 1)
-        self.to_sigma = nn.Conv1d(cond_channels, output_channels, 1)
+        self.to_mu = nn.Conv1d(cond_channels, channels, 1)
+        self.to_sigma = nn.Conv1d(cond_channels, channels, 1)
 
     def forward(self, x, c):
-        x = self.conv(x)
         mu = self.to_mu(c)
         sigma = self.to_sigma(c)
         x = x * mu + sigma
@@ -103,43 +108,53 @@ class FiLM(nn.Module):
 class Upsample(nn.Module):
     def __init__(self, input_channels, output_channels, cond_channels, factor=4, kernel_size=7, num_layers=3):
         super().__init__()
-        self.film = FiLM(input_channels, input_channels, cond_channels)
+        self.film = FiLM(input_channels, cond_channels)
         self.up = nn.ConvTranspose1d(input_channels, input_channels, factor, factor)
-        self.res_blocks = nn.Sequential(
-                *[ResBlock(input_channels, kernel_size,3**i, 1) for i in range(num_layers)])
-        self.proj = nn.Conv1d(input_channels, output_channels, 1)
+        self.up_res = nn.ConvTranspose1d(input_channels, output_channels, factor, factor)
+        self.c1 = DCC(input_channels, input_channels, 3, 1)
+        self.c2 = DCC(input_channels, input_channels, 3, 3)
+        self.c3 = DCC(input_channels, input_channels, 3, 9)
+        self.c4 = DCC(input_channels, output_channels, 3, 1)
 
     def forward(self, x, c):
         x = self.film(x, c)
+        res = self.up_res(x)
         x = self.up(x)
-        x = self.res_blocks(x)
-        x = self.proj(x)
-        return x
+        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = self.c1(x)
+        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = self.c2(x)
+        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = self.c3(x)
+        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = self.c4(x)
+        return x + res
 
 
 class Decoder(nn.Module):
     def __init__(self,
-                 channels=[256, 128, 64, 32],
+                 channels=[192, 96, 48, 24],
                  factors=[4, 4, 5, 6],
-                 cond_channels=[64, 64, 32, 16],
-                 num_harmonics=16,
+                 cond_channels=[192, 96, 48, 24],
+                 num_harmonics=14,
                  speaker_channels=256,
-                 content_channels=256,
+                 content_channels=32,
                  sample_rate=48000,
                  frame_size=480,
                  ):
         super().__init__()
-        self.num_harmonics = num_harmonics
+        self.num_harmonics = num_harmonics + 1
         self.sample_rate = sample_rate
         self.frame_size = frame_size
 
         # initialize first layer
-        self.film = FiLM(content_channels, channels[0], speaker_channels)
+        self.up_input = nn.Conv1d(content_channels, channels[0], 1)
+        self.up_film = FiLM(channels[0], speaker_channels)
         self.e2v = Energy2Vec(speaker_channels)
         self.p2v = Pitch2Vec(speaker_channels)
         
         # initialize downsample layers
-        self.down_input = nn.Conv1d(num_harmonics, cond_channels[-1], 1)
+        self.down_input = nn.Conv1d(num_harmonics + 2, cond_channels[-1], 1)
         self.downs = nn.ModuleList([])
         cond = list(reversed(cond_channels))
         cond_next = cond[1:] + [cond[-1]]
@@ -156,25 +171,40 @@ class Decoder(nn.Module):
                     Upsample(u, u_n, c_n, f))
 
         # output layer
-        self.output_layer = nn.Conv1d(channels[-1], 1, 7, 1, 3)
+        self.output_layer = DCC(channels[-1], 1, 3, 1)
 
-    def forward(self, x, p, e, spk):
-        # oscillate harmonics
+    def generate_source(self, p):
+        L = p.shape[2] * self.frame_size
+        N = p.shape[0]
+        device = p.device
+
+        # generate noise
+        noises = torch.rand(N, 1, L, device=device)
+        
+        # generate harmonics
         sines, _ = oscillate_harmonics(p, 0, self.frame_size, self.sample_rate, self.num_harmonics)
+        source_signals = torch.cat([sines, noises], dim=1)
+        return source_signals
 
+    def forward(self, x, p, e, spk, source_signals):
         # downsamples
         skips = []
-        sines = self.down_input(sines)
+        sines = self.down_input(source_signals)
         for d in self.downs:
             sines = d(sines)
             skips.append(sines)
 
         # upsamples
         cond = spk + self.e2v(e) + self.p2v(p)
-        x = self.film(x, cond)
+        x = self.up_film(self.up_input(x), cond)
         for u, s in zip(self.ups, reversed(skips)):
             x = u(x, s)
 
         x = self.output_layer(x)
         x = x.squeeze(1)
         return x
+
+    def synthesize(self, x, p, e, spk):
+        source_signals = self.generate_source(p)
+        out = self.forward(x, p, e, spk, source_signals)
+        return out

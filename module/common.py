@@ -19,6 +19,25 @@ def energy(wave,
     return F.avg_pool1d(wave.abs().unsqueeze(1), frame_size)
 
 
+# Dlilated Causal Convolution
+class DCC(nn.Module):
+    def __init__(self,
+                 input_channels,
+                 output_channels,
+                 kernel_size,
+                 dilation=1,
+                 groups=1
+                 ):
+        super().__init__()
+        self.conv = nn.Conv1d(input_channels, output_channels, kernel_size, dilation=dilation, groups=groups)
+        self.pad_size = (kernel_size - 1) * dilation
+
+    def forward(self, x):
+        x = F.pad(x, [self.pad_size, 0])
+        x = self.conv(x)
+        return x
+
+
 class ChannelNorm(nn.Module):
     def __init__(self, channels, eps=1e-4):
         super().__init__()
@@ -37,9 +56,7 @@ class ChannelNorm(nn.Module):
 class ResBlock(nn.Module):
     def __init__(self, channels, kernel_size=7, dilation=1, mlp_mul=3, norm=False):
         super().__init__()
-        padding = int((kernel_size*dilation - dilation)/2)
-        self.c1 = nn.Conv1d(channels, channels, kernel_size, dilation=dilation,
-                            groups=channels, padding=padding)
+        self.c1 = DCC(channels, channels, kernel_size, dilation, channels)
         self.norm = ChannelNorm(channels) if norm else nn.Identity()
         self.c2 = nn.Conv1d(channels, channels * mlp_mul, 1)
         self.c3 = nn.Conv1d(channels * mlp_mul, channels, 1)

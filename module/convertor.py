@@ -43,4 +43,4 @@ class Convertor(nn.Module):
         scale = 12 * torch.log2(p / 440) - 9
         scale += pitch_shift
         p = 440 * 2 ** ((scale + 9) / 12)
-        return self.decoder(z, p, l, spk)
+        return self.decoder.synthesize(z, p, l, spk)

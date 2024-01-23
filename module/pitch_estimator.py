@@ -12,7 +12,7 @@ class PitchEstimator(nn.Module):
             hop_size=480,
             internal_channels=256,
             kernel_size=7,
-            num_layers=4,
+            dilations=[1, 3, 9, 1],
             output_channels=512,
             f0_min=10,
             ):
@@ -27,7 +27,7 @@ class PitchEstimator(nn.Module):
                 nn.Conv1d(80, internal_channels, 1))
         self.output_layer = nn.Conv1d(internal_channels, output_channels, 1)
         self.res_stack = nn.Sequential(
-                *[ResBlock(internal_channels, kernel_size, dilation=3**i, norm=True) for i in range(num_layers)])
+                *[ResBlock(internal_channels, kernel_size, dilation=d, norm=True) for d in dilations])
 
     @torch.no_grad()
     def estimate(self, wave):

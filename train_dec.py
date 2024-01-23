@@ -17,12 +17,13 @@ from module.decoder import Decoder
 from module.common import energy
 from module.discriminator import Discriminator
 
+WEIGHT_ADV = 2.0
+WEIGHT_FEAT = 2.0
+
 parser = argparse.ArgumentParser(description="train voice conversion model")
 
-WEIGHT_ADV = 2.5
-
 parser.add_argument('dataset')
-parser.add_argument('-cep', '--content-encoder-path', default='models/content-encoder.pt')
+parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
 parser.add_argument('-pep', '--pitch-estimator-path', default='models/pitch_estimator.pt')
 parser.add_argument('-sep', '--speaker-encoder-path', default='models/speaker_encoder.pt')
 parser.add_argument('-dip', '--discriminator-path', default='models/discriminator.pt')
@@ -30,8 +31,8 @@ parser.add_argument('-dep', '--decoder-path', default='models/decoder.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
 parser.add_argument('-e', '--epoch', default=1000, type=int)
-parser.add_argument('-b', '--batch-size', default=8, type=int)
-parser.add_argument('-len', '--length', default=61440, type=int)
+parser.add_argument('-b', '--batch-size', default=16, type=int)
+parser.add_argument('-len', '--length', default=96000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('-no-spk', default=False, type=bool)
@@ -109,14 +110,18 @@ for epoch in range(args.epoch):
             else:
                 spk = SE.encode(wave)
             p = PE.estimate(wave)
-            l = energy(wave)
-            fake = Dec(z, p, l, spk)
+            e = energy(wave)
+            fake = Dec.synthesize(z, p, e, spk)
+
+            # remove nan
+            fake[fake.isnan()] = 0
+
             loss_adv = 0
             for logit in Dis.logits(cut_center(fake)):
                 loss_adv += (logit ** 2).mean()
-            loss_feat = Dis.feat_loss(fake, wave)
+            loss_feat = Dis.feat_loss(cut_center(fake), cut_center(wave))
             loss_stft = stft_loss(fake, wave)
-            loss_g = loss_stft + loss_adv * WEIGHT_ADV
+            loss_g = loss_stft + loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
@@ -140,7 +145,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Step {step_count}, D: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f}")
+        tqdm.write(f"Step {step_count}, D: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f}, Feat.: {loss_feat.item():.4f}")
 
         bar.update(N)
 
