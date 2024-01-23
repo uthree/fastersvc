@@ -177,3 +177,6 @@ cython_debug/
 
 # Pickle
 *.pickle
+
+# Backups
+backups/
