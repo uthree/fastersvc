@@ -107,6 +107,11 @@ def convert_rt(convertor,
     p = convertor.pitch_estimator.estimate(con_audio)
     e = energy(con_audio, FRAME_SIZE)
 
+    # pitch shift
+    scale = 12 * torch.log2(p / 440) - 9
+    scale += pitch_shift
+    p = 440 * 2 ** ((scale + 9) / 12)
+
     # oscillate harmonics and noise
     src, phase_out = generate_source(p, phase_buffer, buffer_size)
 
