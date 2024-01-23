@@ -36,5 +36,9 @@ class LogMelSpectrogramLoss(nn.Module):
     def forward(self, x, y):
         x = safe_log(self.to_mel(x))
         y = safe_log(self.to_mel(y))
+        x[x.isnan()] = 0
+        x[x.isinf()] = 0
+        y[y.isnan()] = 0
+        y[y.isinf()] = 0
         loss = (x - y).abs().mean()
         return loss
