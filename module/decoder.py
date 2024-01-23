@@ -115,7 +115,7 @@ class Upsample(nn.Module):
         self.c2 = DCC(input_channels, input_channels, 3, 3)
         self.film1 = FiLM(input_channels, cond_channels)
         self.c3 = DCC(input_channels, input_channels, 3, 9)
-        self.c4 = DCC(input_channels, output_channels, 3, 1)
+        self.c4 = DCC(input_channels, output_channels, 3, 27)
         self.film2 = FiLM(output_channels, cond_channels)
 
     def forward(self, x, c):
