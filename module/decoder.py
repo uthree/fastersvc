@@ -116,7 +116,7 @@ class Upsample(nn.Module):
         self.film1 = FiLM(input_channels, cond_channels)
 
         self.c3 = DCC(input_channels, input_channels, 3, 9)
-        self.c4 = DCC(input_channels, input_channels, 3, 27)
+        self.c4 = DCC(input_channels, input_channels, 3, 1)
         self.film2 = FiLM(input_channels, cond_channels)
 
         self.out_conv = nn.Conv1d(input_channels, output_channels, 1)
