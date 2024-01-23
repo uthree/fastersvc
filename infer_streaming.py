@@ -1,4 +1,5 @@
 import argparse
+import math
 
 import torch
 import torch.nn as nn
@@ -6,7 +7,6 @@ import torch.nn.functional as F
 import torchaudio
 from torchaudio.functional import resample
 
-from tqdm import tqdm
 import numpy as np
 import pyaudio
 
@@ -85,11 +85,13 @@ def init_buffer(buffer_size, num_harmonics, device='cpu'):
     return audio_buffer, phase_buffer
 
 @torch.inference_mode()
+@torch.no_grad()
 def convert_rt(convertor,
                chunk,
                buffer,
                spk,
-               pitch_shift):
+               pitch_shift,
+               sample_rate=44100):
     # extract buffer variables
     audio_buffer, phase_buffer = buffer
 
@@ -99,7 +101,7 @@ def convert_rt(convertor,
 
     # concatenate audio buffer and chunk
     con_audio = torch.cat([audio_buffer, chunk], dim=1)
-
+        
     # encode content, estimate energy, estimate pitch
     z = convertor.content_encoder.encode(con_audio)
     p = convertor.pitch_estimator.estimate(con_audio)
@@ -109,7 +111,7 @@ def convert_rt(convertor,
     src, phase_out = generate_source(p, phase_buffer, buffer_size)
 
     # get new phase buffer
-    new_phase_buffer = phase_out[:, :, -1]
+    new_phase_buffer = phase_out[:, :, -1].unsqueeze(2)
 
     # synthesize voice
     y = convertor.decoder(z, p, e, spk, src)
@@ -127,12 +129,12 @@ parser.add_argument('-o', '--output', default=0, type=int)
 parser.add_argument('-l', '--loopback', default=-1, type=int)
 parser.add_argument('-p', '--pitch-shift', default=0, type=float)
 parser.add_argument('-m', '--models', default='./models/')
-parser.add_argument('-t', '--target'. default='target.wav')
+parser.add_argument('-t', '--target', default='target.wav')
 parser.add_argument('-no-spk', default=False, type=bool)
-parser.add_argument('-c', '--chunk', default=1920, type=int)
-parser.add_argument('-b', '--buffer', default=3, type=int)
+parser.add_argument('-c', '--chunk', default=5760, type=int)
+parser.add_argument('-b', '--buffer', default=2, type=int)
 parser.add_argument('-d', '--device', default='cpu')
-parser.add_argument('-sr', '--sample-rate', default=44100, type=int)
+parser.add_argument('-sr', '--sample-rate', default=48000, type=int)
 
 args = parser.parse_args()
 
@@ -141,6 +143,8 @@ device = torch.device(args.device)
 convertor = Convertor()
 convertor.load(args.models)
 convertor.to(device)
+
+audio = pyaudio.PyAudio()
 
 if args.no_spk:
     spk = torch.zeros(1, 256, 1, device=device)
@@ -156,19 +160,19 @@ else:
 stream_input = audio.open(
         format=pyaudio.paInt16,
         rate=args.sample_rate,
-        channels=args.inputchannels,
+        channels=1,
         input_device_index=args.input,
         input=True)
 stream_output = audio.open(
         format=pyaudio.paInt16,
         rate=args.sample_rate, 
-        channels=args.outputchannels,
+        channels=1,
         output_device_index=args.output,
         output=True)
 stream_loopback = audio.open(
         format=pyaudio.paInt16,
         rate=args.sample_rate, 
-        channels=args.loopbackchannels,
+        channels=1,
         output_device_index=args.loopback,
         output=True) if args.loopback != -1 else None
 
@@ -180,9 +184,10 @@ N_HARM = convertor.decoder.num_harmonics
 buffer = init_buffer(BUFFER_SIZE, N_HARM, device)
 
 # inference loop
+print("Converting voice, Ctrl+C to stop conversion")
 while True:
     chunk = stream_input.read(CHUNK_SIZE)
-    chunk = np.frombuffer(audio, dtype=np.int16).astype(np.float32)
+    chunk = np.frombuffer(chunk, dtype=np.int16).astype(np.float32)
     chunk = torch.from_numpy(chunk).to(device)
     chunk = chunk.unsqueeze(0) / 32768
 
