@@ -1,4 +1,10 @@
 # FasterSVC : FastSVC with low-latency inferencing
+## Features
+- streaming inference on CPU (tested on Intel Core i7-10700)
+- low latency (a.c. 0.2 seconds)
+- high quality (based on neural source filter model)
+- high sampling rate (48kHz)
+- lightweight
 
 ## Requirements
 - Python
