@@ -19,8 +19,8 @@ class SpeakerEncoder(nn.Module):
         self.hop_size = hop_size
 
         self.input_layer = nn.Sequential(
-            nn.Conv1d(n_fft // 2 + 1, 80, 1),
-            nn.Conv1d(80, internal_channels, 1))
+            nn.Conv1d(n_fft // 2 + 1, 32, 1),
+            nn.Conv1d(32, internal_channels, 1))
         self.output_layer = nn.Conv1d(internal_channels, output_channels, 1)
 
         self.res_stack = nn.Sequential(
