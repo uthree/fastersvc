@@ -149,6 +149,36 @@ class Upsample(nn.Module):
         return x
 
 
+class MidBlock(nn.Module):
+    def __init__(self, channels, cond_channels, negative_slope=0.1):
+        super().__init__()
+        self.negative_slope = negative_slope
+        self.c1 = DCC(channels, channels, 3, 1)
+        self.c2 = DCC(channels, channels, 3, 3)
+        self.film1 = FiLM(channels, cond_channels)
+        self.c3 = DCC(channels, channels, 3, 9)
+        self.c4 = DCC(channels, channels, 3, 27)
+        self.film2 = FiLM(channels, cond_channels)
+
+    
+    def forward(self, x, c):
+        res = x
+        F.leaky_relu(x, self.negative_slope)
+        x = self.c1(x)
+        F.leaky_relu(x, self.negative_slope)
+        x = self.c2(x)
+        x = self.film1(x, c)
+        x = x + res
+        res = x
+        F.leaky_relu(x, self.negative_slope)
+        x = self.c3(x)
+        F.leaky_relu(x, self.negative_slope)
+        x = self.c4(x)
+        x = self.film2(x, c)
+        x = x + res
+        return x
+
+
 class Decoder(nn.Module):
     def __init__(self,
                  channels=[192, 96, 48, 24],
@@ -165,9 +195,9 @@ class Decoder(nn.Module):
         self.sample_rate = sample_rate
         self.frame_size = frame_size
 
-        # initialize first layer
-        self.up_input = nn.Conv1d(content_channels, channels[0], 1)
-        self.up_film = FiLM(channels[0], speaker_channels)
+        
+        self.content_in = nn.Conv1d(content_channels, channels[0], 1)
+        self.mid_block = MidBlock(channels[0], speaker_channels)
         self.e2v = Energy2Vec(speaker_channels)
         self.p2v = Pitch2Vec(speaker_channels)
         
@@ -214,7 +244,8 @@ class Decoder(nn.Module):
 
         # upsamples
         cond = spk + self.e2v(e) + self.p2v(p)
-        x = self.up_film(self.up_input(x), cond)
+        x = self.content_in(x)
+        x = self.mid_block(x, cond)
         for u, s in zip(self.ups, reversed(skips)):
             x = u(x, s)
 
