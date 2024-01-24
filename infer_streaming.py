@@ -73,7 +73,7 @@ def generate_source(f0, phase, begin_point):
                                            phase,
                                            FRAME_SIZE,
                                            INTERNAL_SR,
-                                           phase.shape[1],
+                                           phase.shape[1] - 1,
                                            begin_point)
     source_signals = torch.cat([sines, noises], dim=1)
     return source_signals, phase_out
@@ -83,6 +83,7 @@ def init_buffer(buffer_size, num_harmonics, device='cpu'):
     audio_buffer = torch.zeros(1, buffer_size, device=device)
     phase_buffer = torch.zeros(1, num_harmonics + 1, 1, device=device)
     return audio_buffer, phase_buffer
+
 
 @torch.inference_mode()
 @torch.no_grad()
@@ -184,6 +185,7 @@ stream_loopback = audio.open(
 
 BUFFER_SIZE = args.buffer * args.chunk
 CHUNK_SIZE = args.chunk
+N_HARM = convertor.decoder.num_harmonics
 
 # initialize buffer
 buffer = init_buffer(BUFFER_SIZE, N_HARM, device)
