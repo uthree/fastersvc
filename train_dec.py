@@ -64,7 +64,7 @@ def save_models(dec, se, dis):
 def cut_center(x):
     length = x.shape[1]
     center = length // 2
-    size = length // 8
+    size = length // 2
     return x[:, center-size:center+size]
 
 device = torch.device(args.device)
