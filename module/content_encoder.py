@@ -10,7 +10,7 @@ class ContentEncoder(nn.Module):
                  n_fft=1920,
                  hop_size=480,
                  internal_channels=256,
-                 kernel_size=7,
+                 kernel_size=5,
                  dilations=[1, 3, 9, 1],
                  output_channels=32,
                  num_tokens=32
@@ -20,8 +20,8 @@ class ContentEncoder(nn.Module):
         self.hop_size = hop_size
 
         self.input_layer = nn.Sequential(
-            nn.Conv1d(n_fft // 2 + 1, 80, 1, bias=False),
-            nn.Conv1d(80, internal_channels, 1, bias=False))
+            nn.Conv1d(n_fft // 2 + 1, 32, 1, bias=False),
+            nn.Conv1d(32, internal_channels, 1, bias=False))
 
         self.res_stack = nn.Sequential(
                 *[ResBlock(internal_channels, kernel_size, dilation=d, norm=True) for d in dilations])

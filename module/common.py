@@ -54,7 +54,7 @@ class ChannelNorm(nn.Module):
 
 
 class ResBlock(nn.Module):
-    def __init__(self, channels, kernel_size=7, dilation=1, mlp_mul=3, norm=False):
+    def __init__(self, channels, kernel_size=7, dilation=1, mlp_mul=1, norm=False):
         super().__init__()
         self.c1 = DCC(channels, channels, kernel_size, dilation, channels)
         self.norm = ChannelNorm(channels) if norm else nn.Identity()
