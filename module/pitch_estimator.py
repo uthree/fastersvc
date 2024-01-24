@@ -6,16 +6,15 @@ from .common import ResBlock, spectrogram
 
 
 class PitchEstimator(nn.Module):
-    def __init__(
-            self,
-            n_fft=1920,
-            hop_size=480,
-            internal_channels=256,
-            kernel_size=5,
-            dilations=[1, 3, 9, 1],
-            output_channels=512,
-            f0_min=10,
-            ):
+    def __init__(self,
+                 n_fft=1920,
+                 hop_size=480,
+                 internal_channels=256,
+                 kernel_size=5,
+                 dilations=[1, 3, 9, 1],
+                 output_channels=512,
+                 f0_min=10
+                 ):
         super().__init__()
         self.n_fft = n_fft
         self.hop_size = hop_size

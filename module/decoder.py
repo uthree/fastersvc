@@ -5,7 +5,6 @@ import torch.nn.functional as F
 
 from .common import DCC
 
-LRELU_SLOPE = 0.1
 
 # Oscillate harmonic signal
 #
@@ -49,8 +48,9 @@ def oscillate_harmonics(f0,
 
 
 class Downsample(nn.Module):
-    def __init__(self, input_channels, output_channels, factor=4):
+    def __init__(self, input_channels, output_channels, factor=4, negative_slope=0.1):
         super().__init__()
+        self.negative_slope = negative_slope
         self.down = nn.AvgPool1d(factor)
         self.down_res = nn.Conv1d(input_channels, output_channels, 1)
         self.c1 = DCC(input_channels, input_channels, 3, 1)
@@ -60,11 +60,11 @@ class Downsample(nn.Module):
     def forward(self, x):
         x = self.down(x)
         res = self.down_res(x)
-        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
-        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = F.leaky_relu(x, self.negative_slope)
         x = self.c2(x)
-        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = F.leaky_relu(x, self.negative_slope)
         x = self.c3(x)
         return x + res
 
@@ -106,8 +106,16 @@ class FiLM(nn.Module):
 
 
 class Upsample(nn.Module):
-    def __init__(self, input_channels, output_channels, cond_channels, factor=4, kernel_size=7):
+    def __init__(self,
+                 input_channels,
+                 output_channels,
+                 cond_channels,
+                 factor=4,
+                 kernel_size=7,
+                 negative_slope=0.1):
         super().__init__()
+        self.negative_slope = negative_slope
+
         self.up = nn.Upsample(scale_factor=factor, mode='linear')
 
         self.c1 = DCC(input_channels, input_channels, 3, 1)
@@ -124,16 +132,16 @@ class Upsample(nn.Module):
         x = self.up(x)
         c = self.up(c)
         res = x
-        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
-        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = F.leaky_relu(x, self.negative_slope)
         x = self.c2(x)
         x = self.film1(x, c)
         x = x + res
         res = x
-        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = F.leaky_relu(x, self.negative_slope)
         x = self.c3(x)
-        x = F.leaky_relu(x, LRELU_SLOPE)
+        x = F.leaky_relu(x, self.negative_slope)
         x = self.c4(x)
         x = self.film2(x, c)
         x = x + res
@@ -190,7 +198,7 @@ class Decoder(nn.Module):
 
         # generate noise
         noises = torch.rand(N, 1, L, device=device)
-        
+
         # generate harmonics
         sines, _ = oscillate_harmonics(p, 0, self.frame_size, self.sample_rate, self.num_harmonics)
         source_signals = torch.cat([sines, noises], dim=1)
