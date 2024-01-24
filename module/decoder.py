@@ -51,15 +51,15 @@ def oscillate_harmonics(f0,
 class Downsample(nn.Module):
     def __init__(self, input_channels, output_channels, factor=4):
         super().__init__()
-        self.down_res = nn.Conv1d(input_channels, output_channels, factor, factor)
-        self.down = nn.Conv1d(input_channels, output_channels, factor, factor)
-        self.c1 = DCC(output_channels, output_channels, 3, 1)
-        self.c2 = DCC(output_channels, output_channels, 3, 2)
-        self.c3 = DCC(output_channels, output_channels, 3, 4)
+        self.down = nn.AvgPool1d(factor)
+        self.down_res = nn.Conv1d(input_channels, output_channels, 1)
+        self.c1 = DCC(input_channels, input_channels, 3, 1)
+        self.c2 = DCC(input_channels, input_channels, 3, 2)
+        self.c3 = DCC(input_channels, output_channels, 3, 4)
 
     def forward(self, x):
-        res = self.down_res(x)
         x = self.down(x)
+        res = self.down_res(x)
         x = F.leaky_relu(x, LRELU_SLOPE)
         x = self.c1(x)
         x = F.leaky_relu(x, LRELU_SLOPE)
@@ -106,11 +106,10 @@ class FiLM(nn.Module):
 
 
 class Upsample(nn.Module):
-    def __init__(self, input_channels, output_channels, cond_channels, factor=4, kernel_size=7, num_layers=3):
+    def __init__(self, input_channels, output_channels, cond_channels, factor=4, kernel_size=7):
         super().__init__()
-        self.up = nn.ConvTranspose1d(input_channels, input_channels, factor, factor)
-        self.cond_up = nn.ConvTranspose1d(cond_channels, cond_channels, factor, factor)
-        
+        self.up = nn.Upsample(scale_factor=factor, mode='linear')
+
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 3)
         self.film1 = FiLM(input_channels, cond_channels)
@@ -123,7 +122,7 @@ class Upsample(nn.Module):
 
     def forward(self, x, c):
         x = self.up(x)
-        c = self.cond_up(c)
+        c = self.up(c)
         res = x
         x = F.leaky_relu(x, LRELU_SLOPE)
         x = self.c1(x)
@@ -147,7 +146,7 @@ class Decoder(nn.Module):
                  channels=[192, 96, 48, 24],
                  factors=[4, 4, 5, 6],
                  cond_channels=[192, 96, 48, 24],
-                 num_harmonics=14,
+                 num_harmonics=0, # F0 sinewave only
                  speaker_channels=256,
                  content_channels=32,
                  sample_rate=48000,

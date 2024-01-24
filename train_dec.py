@@ -18,7 +18,7 @@ from module.common import energy
 from module.discriminator import Discriminator
 
 WEIGHT_ADV = 2.5
-WEIGHT_FEAT = 2.0
+WEIGHT_FEAT = 0.5
 WEIGHT_MEL = 45.0
 
 parser = argparse.ArgumentParser(description="train voice conversion model")
