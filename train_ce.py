@@ -76,12 +76,9 @@ for epoch in range(args.epoch):
 
         Opt.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
-            z = CE.encode_without_vector_explorer(wave)
-            z_ve = CE.vector_explorer(z)
+            z = CE.encode(wave)
             hubert_features = F.interpolate(hubert_features, z.shape[2])
-            loss_distill = (z - hubert_features).abs().mean()
-            loss_ve = (z_ve - z).abs().mean() * 0.1
-            loss = loss_distill + loss_ve
+            loss = (z - hubert_features).abs().mean()
 
         scaler.scale(loss).backward()
         scaler.step(Opt)
@@ -90,7 +87,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
 
-        tqdm.write(f"Step {step_count}, Distill.: {loss_distill.item():.4f}, V.E.: {loss_ve.item():.4f}")
+        tqdm.write(f"Step {step_count}, loss: {loss.item()}")
 
         bar.update(N)
 
