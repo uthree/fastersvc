@@ -34,10 +34,10 @@ def oscillate_harmonics(f0,
                         phase=0,
                         frame_size=480,
                         sample_rate=48000,
-                        num_harmonics=1,
+                        num_harmonics=0,
                         begin_point=0):
     N = f0.shape[0]
-    Nh = num_harmonics
+    Nh = num_harmonics + 1
     Lf = f0.shape[2]
     Lw = Lf * frame_size
 
@@ -81,7 +81,7 @@ def generate_source(f0, phase, begin_point):
 
 def init_buffer(buffer_size, num_harmonics, device='cpu'):
     audio_buffer = torch.zeros(1, buffer_size, device=device)
-    phase_buffer = torch.zeros(1, num_harmonics, 1, device=device)
+    phase_buffer = torch.zeros(1, num_harmonics + 1, 1, device=device)
     return audio_buffer, phase_buffer
 
 @torch.inference_mode()
@@ -95,8 +95,7 @@ def convert_rt(convertor,
     # extract buffer variables
     audio_buffer, phase_buffer = buffer
 
-    # get num_harmonics, buffer size
-    num_harmonics = phase_buffer.shape[1]
+    # buffer size
     buffer_size = audio_buffer.shape[1] # same to begin_point of oscillator
 
     # concatenate audio buffer and chunk
@@ -185,7 +184,6 @@ stream_loopback = audio.open(
 
 BUFFER_SIZE = args.buffer * args.chunk
 CHUNK_SIZE = args.chunk
-N_HARM = convertor.decoder.num_harmonics
 
 # initialize buffer
 buffer = init_buffer(BUFFER_SIZE, N_HARM, device)

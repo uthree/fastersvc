@@ -24,9 +24,9 @@ def oscillate_harmonics(f0,
                         phase=0,
                         frame_size=480,
                         sample_rate=48000,
-                        num_harmonics=1):
+                        num_harmonics=0):
     N = f0.shape[0]
-    Nh = num_harmonics
+    Nh = num_harmonics + 1
     Lf = f0.shape[2]
     Lw = Lf * frame_size
 
@@ -153,7 +153,7 @@ class Decoder(nn.Module):
                  frame_size=480,
                  ):
         super().__init__()
-        self.num_harmonics = num_harmonics + 1
+        self.num_harmonics = num_harmonics
         self.sample_rate = sample_rate
         self.frame_size = frame_size
 
@@ -192,7 +192,7 @@ class Decoder(nn.Module):
         noises = torch.rand(N, 1, L, device=device)
         
         # generate harmonics
-        sines, _ = oscillate_harmonics(p, 0, self.frame_size, self.sample_rate, self.num_harmonics)
+        sines, _ = oscillate_harmonics(p, 0, self.frame_size, self.sample_rate, self.num_harmonics + 1)
         source_signals = torch.cat([sines, noises], dim=1)
         return source_signals
 
