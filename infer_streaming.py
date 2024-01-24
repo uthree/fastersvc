@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchaudio
-from torchaudio.functional import resample
+from torchaudio.functional import resample, gain
 
 import numpy as np
 import pyaudio
@@ -140,6 +140,8 @@ parser.add_argument('-c', '--chunk', default=5760, type=int)
 parser.add_argument('-b', '--buffer', default=2, type=int)
 parser.add_argument('-d', '--device', default='cpu')
 parser.add_argument('-sr', '--sample-rate', default=48000, type=int)
+parser.add_argument('-ig', '--input-gain', default=0, type=float)
+parser.add_argument('-og', '--output-gain', default=0, type=float)
 
 args = parser.parse_args()
 
@@ -195,8 +197,10 @@ while True:
     chunk = np.frombuffer(chunk, dtype=np.int16).astype(np.float32)
     chunk = torch.from_numpy(chunk).to(device)
     chunk = chunk.unsqueeze(0) / 32768
-
+    
+    chunk = gain(chunk, args.input_gain)
     chunk, buffer = convert_rt(convertor, chunk, buffer, spk, args.pitch_shift)
+    chunk = gain(chunk, args.output_gain)
 
     chunk = chunk.cpu().numpy() * 32768
     chunk = chunk.astype(np.int16).tobytes()
