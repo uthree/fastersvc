@@ -32,6 +32,7 @@ class ContentEncoder(nn.Module):
         x = self.input_layer(spec)
         x = self.res_stack(x)
         x = self.output_layer(x)
+        x = torch.softmax(x, dim=1)
         return x
 
     def encode(self, wave):

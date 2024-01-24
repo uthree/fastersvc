@@ -20,6 +20,7 @@ from module.discriminator import Discriminator
 WEIGHT_ADV = 2.5
 WEIGHT_FEAT = 0.5
 WEIGHT_MEL = 45.0
+WEIGHT_CON = 20.0
 
 parser = argparse.ArgumentParser(description="train voice conversion model")
 
@@ -124,7 +125,8 @@ for epoch in range(args.epoch):
             loss_feat = Dis.feat_loss(cut_center(fake), cut_center(wave))
             loss_stft = stft_loss(fake, wave)
             loss_mel = logmel_loss(fake, wave)
-            loss_g = loss_stft + loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL
+            loss_con = (z.detach() - CE.encode(fake.to(torch.float))).abs().mean()
+            loss_g = loss_stft + loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL + loss_con * WEIGHT_CON
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
@@ -148,7 +150,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Step {step_count}, D: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, Mel.: {loss_mel.item():.4f}, STFT: {loss_stft.item():.4f}, Feat.: {loss_feat.item():.4f}")
+        tqdm.write(f"Step {step_count}, D: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, Mel.: {loss_mel.item():.4f}, STFT: {loss_stft.item():.4f}, Feat.: {loss_feat.item():.4f}, Con.: {loss_con.item():.4f}")
 
         bar.update(N)
 

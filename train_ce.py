@@ -58,6 +58,8 @@ Opt = optim.RAdam(CE.parameters(), lr=args.learning_rate)
 
 hubert = HubertForCTC.from_pretrained(args.hubert).to(device).eval()
 
+cross_entropy = nn.CrossEntropyLoss()
+
 # Training
 step_count = 0
 
@@ -71,14 +73,14 @@ for epoch in range(args.epoch):
         with torch.cuda.amp.autocast(enabled=args.fp16):
             wave_16k = resample(wave, 48000, 16000)
             with torch.no_grad():
-                hubert_features = torch.softmax(hubert(wave_16k).logits, dim=2)
+                hubert_features = hubert(wave_16k).logits
                 hubert_features = hubert_features.transpose(1, 2)
 
         Opt.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
             z = CE.encode(wave)
-            hubert_features = F.interpolate(hubert_features, z.shape[2])
-            loss = (z - hubert_features).abs().mean()
+            labels = F.interpolate(hubert_features, z.shape[2]).argmax(dim=1)
+            loss = cross_entropy(z, labels)
 
         scaler.scale(loss).backward()
         scaler.step(Opt)
