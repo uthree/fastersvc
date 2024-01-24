@@ -16,7 +16,7 @@ def spectrogram(wave, n_fft, hop_size):
 # Output: [BatchSize, 1, Frames]
 def energy(wave,
            frame_size=480):
-    return F.avg_pool1d(wave.abs().unsqueeze(1), frame_size)
+    return F.max_pool1d(wave.abs().unsqueeze(1), frame_size * 2, frame_size, frame_size//2)
 
 
 # Dlilated Causal Convolution
