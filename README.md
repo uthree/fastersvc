@@ -1,4 +1,4 @@
-# FasterSVC : FastSVC with low-latency inferencing
+# FasterSVC : modified FastSVC for low-latency realtime inferencing
 ## Features
 - streaming inference on CPU (tested on Intel Core i7-10700)
 - low latency (a.c. 0.2 seconds)
@@ -61,3 +61,6 @@ python3 audio_device_list.py
 python3 infer_streaming.py -i <input device id> -o <output device id> -l <loopback device id> -t <target audio file>
 ```
 (loopback is optional)
+
+## References
+- [FastSVC](https://arxiv.org/abs/2011.05731)
