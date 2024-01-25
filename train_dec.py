@@ -36,9 +36,9 @@ parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('-no-spk', default=False, type=bool)
 
 parser.add_argument('--weight-adv', default=2.5, type=float)
-parser.add_argument('--weight-feat', default=0.5, type=float)
-parser.add_argument('--weight-mel', default=2.0, type=float)
-parser.add_argument('--weight-con', default=30.0, type=float)
+parser.add_argument('--weight-feat', default=1.0, type=float)
+parser.add_argument('--weight-mel', default=1.0, type=float)
+parser.add_argument('--weight-con', default=50.0, type=float)
 
 args = parser.parse_args()
 
