@@ -131,7 +131,7 @@ for epoch in range(args.epoch):
             loss_feat = Dis.feat_loss(cut_center(fake), cut_center(wave))
             loss_stft = stft_loss(fake, wave)
             loss_mel = logmel_loss(fake, wave)
-            loss_con = (z.detach() - CE.encode(fake.to(torch.float))).abs().mean()
+            loss_con = (CE.encode(wave, False) - CE.encode(fake.to(torch.float), False)).abs().mean()
             loss_g = loss_stft + loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL + loss_con * WEIGHT_CON
 
         scaler.scale(loss_g).backward()
