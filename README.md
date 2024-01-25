@@ -58,6 +58,6 @@ python3 audio_device_list.py
 
 2. run inference
 ```sh
-python3 infer_streaming.py -i <input device id> -o <output device id> -l <loopback device id>
+python3 infer_streaming.py -i <input device id> -o <output device id> -l <loopback device id> -t <target audio file>
 ```
 (loopback is optional)
