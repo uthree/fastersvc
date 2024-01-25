@@ -17,10 +17,6 @@ from module.decoder import Decoder
 from module.common import energy
 from module.discriminator import Discriminator
 
-WEIGHT_ADV = 2.5
-WEIGHT_FEAT = 0.5
-WEIGHT_MEL = 45.0
-WEIGHT_CON = 20.0
 
 parser = argparse.ArgumentParser(description="train voice conversion model")
 
@@ -39,7 +35,17 @@ parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('-no-spk', default=False, type=bool)
 
+parser.add_argument('--weight-adv', default=2.5, type=float)
+parser.add_argument('--weight-feat', default=0.5, type=float)
+parser.add_argument('--weight-mel', default=45.0, type=float)
+parser.add_argument('--weight-con', default=20.0, type=float)
+
 args = parser.parse_args()
+
+WEIGHT_ADV = ags.weight_adv
+WEIGHT_FEAT = args.weight_feat
+WEIGHT_MEL = args.weight_mel
+WEIGHT_CON = args.weight_con
 
 def load_or_init_models(device=torch.device('cpu')):
     dec = Decoder().to(device)
