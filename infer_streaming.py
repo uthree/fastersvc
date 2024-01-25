@@ -13,6 +13,7 @@ import pyaudio
 from module.convertor import Convertor
 from module.common import energy
 
+
 FRAME_SIZE=480
 INTERNAL_SR=48000
 
@@ -124,8 +125,8 @@ def convert_rt(convertor,
     y = convertor.decoder(z, p, e, spk, src)
 
     audio_out = y[:, buffer_size:]
-    half_chunk = chunk_size // 2
-    new_audio_buffer = x[:, -buffer_size:]
+    left_shift = FRAME_SIZE * 3
+    new_audio_buffer = x[:, -buffer_size-left_shift:-left_shift]
 
     return audio_out, (new_audio_buffer, new_phase_buffer)
 
