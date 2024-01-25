@@ -42,7 +42,7 @@ parser.add_argument('--weight-con', default=20.0, type=float)
 
 args = parser.parse_args()
 
-WEIGHT_ADV = ags.weight_adv
+WEIGHT_ADV = args.weight_adv
 WEIGHT_FEAT = args.weight_feat
 WEIGHT_MEL = args.weight_mel
 WEIGHT_CON = args.weight_con
