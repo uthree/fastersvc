@@ -3,7 +3,7 @@
 - streaming inference on CPU (tested on Intel Core i7-10700)
 - low latency (a.c. 0.2 seconds)
 - high quality (based on neural source filter model)
-- high sampling rate (48kHz)
+- fullband sampling rate (48kHz)
 - lightweight
 
 ## Requirements
@@ -36,10 +36,11 @@ python3 train_ce.py <dataset path>
 python3 train_dec.py <datset.path>
 ```
 
-### TIPS
+### Training Options
 - add `-fp16 True` to accelerate training with float16 if you have RTX series GPU.
 - add `-b <number>` to set batch size. default is `16`.
-- add `-e <number>` to set epoch. default is `1000`. 
+- add `-e <number>` to set epoch. default is `1000`.
+- add `-d <device name>` to set training device, default is `cuda`.
 
 ## Inference
 1. create directory `inputs`
