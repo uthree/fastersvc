@@ -30,9 +30,9 @@ class Convertor(nn.Module):
     def encode_speaker(self, wave):
         return self.speaker_encoder.encode(wave)
     
-    def convert(self, wave, spk, pitch_shift=0):
+    def convert(self, wave, spk, pitch_shift=0, alpha=0.2):
         # Conversion
-        z = self.content_encoder.encode(wave)
+        z = self.content_encoder.encode_infer(wave, alpha)
         l = energy(wave)
         p = self.pitch_estimator.estimate(wave)
         scale = 12 * torch.log2(p / 440) - 9

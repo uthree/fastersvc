@@ -15,6 +15,18 @@ def energy(wave,
            frame_size=480):
     return F.max_pool1d(wave.abs().unsqueeze(1), frame_size * 2, frame_size, frame_size//2)
 
+
+# prob_dist: [BatchSize, NumClasses, Frames]
+# Output: [BatchSize, NumClasses, Frames]
+def probs2onehot(prob_dist, axis=1):
+    max_values, max_indices = prob_dist.max(dim=axis, keepdim=True)
+
+    one_hot = torch.zeros_like(prob_dist)
+    one_hot.scatter_(axis, max_indices, 1)
+
+    return one_hot
+
+
 # Dlilated Causal Convolution
 class DCC(nn.Module):
     def __init__(self,

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .common import ResBlock, spectrogram
+from .common import ResBlock, spectrogram, probs2onehot
 
 
 class ContentEncoder(nn.Module):
@@ -36,7 +36,12 @@ class ContentEncoder(nn.Module):
             x = torch.softmax(x, dim=1)
         return x
 
-    def encode(self, wave, softmax=True):
+    def encode_train(self, wave, softmax=True):
         spec = spectrogram(wave, self.n_fft, self.hop_size)
-        x = self.forward(spec, softmax)
-        return x
+        return self.forward(spec, softmax)
+
+    def encode_infer(self, wave, alpha=0.0):
+        spec = spectrogram(wave, self.n_fft, self.hop_size)
+        probs = self.forward(spec)
+        onehot = probs2onehot(probs)
+        return alpha * probs + onehot * (1 - alpha)

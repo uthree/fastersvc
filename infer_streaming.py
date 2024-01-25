@@ -92,7 +92,8 @@ def convert_rt(convertor,
                buffer,
                spk,
                pitch_shift,
-               sample_rate=44100):
+               sample_rate=44100,
+               alpha=0.5):
     # extract buffer variables
     audio_buffer, phase_buffer = buffer
 
@@ -104,7 +105,7 @@ def convert_rt(convertor,
     con_audio = torch.cat([audio_buffer, chunk], dim=1)
         
     # encode content, estimate energy, estimate pitch
-    z = convertor.content_encoder.encode(con_audio)
+    z = convertor.content_encoder.encode_infer(con_audio, alpha)
     p = convertor.pitch_estimator.estimate(con_audio)
     e = energy(con_audio, FRAME_SIZE)
 
@@ -143,6 +144,7 @@ parser.add_argument('-d', '--device', default='cpu')
 parser.add_argument('-sr', '--sample-rate', default=48000, type=int)
 parser.add_argument('-ig', '--input-gain', default=0, type=float)
 parser.add_argument('-og', '--output-gain', default=0, type=float)
+parser.add_argument('-a', '--alpha', default=0.2, type=float)
 
 args = parser.parse_args()
 
@@ -200,7 +202,7 @@ while True:
     chunk = chunk.unsqueeze(0) / 32768
     
     chunk = gain(chunk, args.input_gain)
-    chunk, buffer = convert_rt(convertor, chunk, buffer, spk, args.pitch_shift)
+    chunk, buffer = convert_rt(convertor, chunk, buffer, spk, args.pitch_shift, args.alpha)
     chunk = gain(chunk, args.output_gain)
 
     chunk = chunk.cpu().numpy() * 32768

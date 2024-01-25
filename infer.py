@@ -18,6 +18,7 @@ parser.add_argument('-m', '--models', default='./models/')
 parser.add_argument('-p', '--pitch-shift', default=0, type=float)
 parser.add_argument('-t', '--target', default='NONE')
 parser.add_argument('-d', '--device', default='cpu')
+parser.add_argument('-a', '--alpha', default=0.5, type=float)
 parser.add_argument('--chunk', default=48000)
 
 args = parser.parse_args()
@@ -66,7 +67,7 @@ for i, path in enumerate(paths):
         for chunk in tqdm(chunks):
             chunk = chunk.squeeze(1)
 
-            chunk = convertor.convert(chunk.to(device), spk, args.pitch_shift)
+            chunk = convertor.convert(chunk.to(device), spk, args.pitch_shift, args.alpha)
 
             chunk = chunk[:, args.chunk:-args.chunk]
             result.append(chunk.to('cpu'))
