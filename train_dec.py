@@ -113,7 +113,7 @@ for epoch in range(args.epoch):
         OptDec.zero_grad()
         OptSE.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
-            z = CE.encode_train(wave)
+            z = CE.encode_infer(wave, 0.0)
             if args.no_spk:
                 spk = torch.zeros(N, 256, 1, device=device)
             else:
