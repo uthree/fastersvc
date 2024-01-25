@@ -102,12 +102,12 @@ def convert_rt(convertor,
     chunk_size = chunk.shape[1]
 
     # concatenate audio buffer and chunk
-    con_audio = torch.cat([audio_buffer, chunk], dim=1)
+    x = torch.cat([audio_buffer, chunk], dim=1)
         
     # encode content, estimate energy, estimate pitch
-    z = convertor.content_encoder.encode_infer(con_audio, alpha)
-    p = convertor.pitch_estimator.estimate(con_audio)
-    e = energy(con_audio, FRAME_SIZE)
+    z = convertor.content_encoder.encode_infer(x, alpha)
+    p = convertor.pitch_estimator.estimate(x)
+    e = energy(x, FRAME_SIZE)
 
     # pitch shift
     scale = 12 * torch.log2(p / 440) - 9
@@ -125,7 +125,7 @@ def convert_rt(convertor,
 
     audio_out = y[:, buffer_size:]
     half_chunk = chunk_size // 2
-    new_audio_buffer = y[:, -buffer_size:]
+    new_audio_buffer = x[:, -buffer_size:]
 
     return audio_out, (new_audio_buffer, new_phase_buffer)
 
