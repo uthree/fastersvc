@@ -16,9 +16,8 @@ parser.add_argument('-i', '--inputs', default="./inputs/")
 parser.add_argument('-o', '--outputs', default="./outputs/")
 parser.add_argument('-m', '--models', default='./models/')
 parser.add_argument('-p', '--pitch-shift', default=0, type=float)
-parser.add_argument('-t', '--target', default='target.wav')
+parser.add_argument('-t', '--target', default='NONE')
 parser.add_argument('-d', '--device', default='cpu')
-parser.add_argument('-no-spk', default=False, type=bool)
 parser.add_argument('--chunk', default=48000)
 
 args = parser.parse_args()
@@ -33,7 +32,7 @@ if not os.path.exists(args.outputs):
     os.mkdir(args.outputs)
 
 
-if args.no_spk:
+if args.target == 'NONE':
     spk = torch.zeros(1, 256, 1, device=device)
 else:
     print("Loading target...")

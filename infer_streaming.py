@@ -134,8 +134,7 @@ parser.add_argument('-o', '--output', default=0, type=int)
 parser.add_argument('-l', '--loopback', default=-1, type=int)
 parser.add_argument('-p', '--pitch-shift', default=0, type=float)
 parser.add_argument('-m', '--models', default='./models/')
-parser.add_argument('-t', '--target', default='target.wav')
-parser.add_argument('-no-spk', default=False, type=bool)
+parser.add_argument('-t', '--target', default='NONE')
 parser.add_argument('-c', '--chunk', default=3840, type=int)
 parser.add_argument('-b', '--buffer', default=2, type=int)
 parser.add_argument('-d', '--device', default='cpu')
@@ -153,7 +152,7 @@ convertor.to(device)
 
 audio = pyaudio.PyAudio()
 
-if args.no_spk:
+if args.target == 'NONE':
     spk = torch.zeros(1, 256, 1, device=device)
 else:
     print("Loading target...")
