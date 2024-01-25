@@ -22,8 +22,8 @@ class PitchEstimator(nn.Module):
         self.f0_min = 10
 
         self.input_layer = nn.Sequential(
-                nn.Conv1d(n_fft // 2 + 1, 48, 1, bias=False),
-                nn.Conv1d(48, internal_channels, 1, bias=False))
+                nn.Conv1d(n_fft // 2 + 1, 128, 1, bias=False),
+                nn.Conv1d(128, internal_channels, 1, bias=False))
         self.output_layer = nn.Conv1d(internal_channels, output_channels, 1)
         self.res_stack = nn.Sequential(
                 *[ResBlock(internal_channels, kernel_size, dilation=d, norm=True) for d in dilations])
