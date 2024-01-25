@@ -96,8 +96,9 @@ def convert_rt(convertor,
     # extract buffer variables
     audio_buffer, phase_buffer = buffer
 
-    # buffer size
+    # buffer size and chunk size
     buffer_size = audio_buffer.shape[1] # same to begin_point of oscillator
+    chunk_size = chunk.shape[1]
 
     # concatenate audio buffer and chunk
     con_audio = torch.cat([audio_buffer, chunk], dim=1)
@@ -122,6 +123,7 @@ def convert_rt(convertor,
     y = convertor.decoder(z, p, e, spk, src)
 
     audio_out = y[:, buffer_size:]
+    half_chunk = chunk_size // 2
     new_audio_buffer = y[:, -buffer_size:]
 
     return audio_out, (new_audio_buffer, new_phase_buffer)

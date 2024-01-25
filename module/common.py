@@ -7,14 +7,13 @@ import torch.nn.functional as F
 # Output: [BatchSize, 1, Frames]
 def spectrogram(wave, n_fft, hop_size):
     spec = torch.stft(wave, n_fft, hop_size, return_complex=True).abs()
-    return spec[:, :, :-1]
+    return spec[:, :, 1:]
 
 # wave: [BatchSize, 1, Length]
 # Output: [BatchSize, 1, Frames]
 def energy(wave,
            frame_size=480):
     return F.max_pool1d(wave.abs().unsqueeze(1), frame_size * 2, frame_size, frame_size//2)
-
 
 # Dlilated Causal Convolution
 class DCC(nn.Module):
