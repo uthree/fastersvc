@@ -66,7 +66,7 @@ for i, path in enumerate(paths):
         for chunk in tqdm(chunks):
             chunk = chunk.squeeze(1)
 
-            chunk = convertor.convert(chunk, spk, args.pitch_shift)
+            chunk = convertor.convert(chunk.to(device), spk, args.pitch_shift)
 
             chunk = chunk[:, args.chunk:-args.chunk]
             result.append(chunk.to('cpu'))

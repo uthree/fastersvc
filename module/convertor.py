@@ -31,12 +31,6 @@ class Convertor(nn.Module):
         return self.speaker_encoder.encode(wave)
     
     def convert(self, wave, spk, pitch_shift=0):
-        # Padding
-        N = wave.shape[0]
-        pad_len = self.frame_size - (wave.shape[1] % self.frame_size)
-        pad = torch.zeros(N, pad_len, device=wave.device)
-        wave = torch.cat([wave, pad], dim=1)
-
         # Conversion
         z = self.content_encoder.encode(wave)
         l = energy(wave)
