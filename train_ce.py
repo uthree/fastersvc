@@ -78,7 +78,7 @@ for epoch in range(args.epoch):
 
         Opt.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
-            z = CE.encode(wave)
+            z = CE.encode(wave, softmax=False)
             labels = F.interpolate(hubert_features, z.shape[2]).argmax(dim=1)
             loss = cross_entropy(z, labels)
 

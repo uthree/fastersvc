@@ -28,15 +28,17 @@ class ContentEncoder(nn.Module):
 
         self.output_layer = nn.Conv1d(internal_channels, output_channels, 1)
 
-    def forward(self, spec):
+    def forward(self, spec, softmax=True):
         x = self.input_layer(spec)
         x = self.res_stack(x)
         x = self.output_layer(x)
+        if softmax:
+            x = torch.softmax(x, dim=1)
         return x
 
-    def encode(self, wave):
+    def encode(self, wave, softmax=True):
         spec = spectrogram(wave, self.n_fft, self.hop_size)
-        x = self.forward(spec)
+        x = self.forward(spec, softmax)
         return x
 
 
