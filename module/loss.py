@@ -30,7 +30,7 @@ class MultiScaleSTFTLoss(nn.Module):
 
 
 class LogMelSpectrogramLoss(nn.Module):
-    def __init__(self, sample_rate=48000, n_fft=2048, n_mels=128):
+    def __init__(self, sample_rate=48000, n_fft=4096, n_mels=128):
         super().__init__()
         self.to_mel = torchaudio.transforms.MelSpectrogram(sample_rate, n_fft, n_mels=n_mels)
 
