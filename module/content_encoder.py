@@ -40,5 +40,3 @@ class ContentEncoder(nn.Module):
         spec = spectrogram(wave, self.n_fft, self.hop_size)
         x = self.forward(spec, softmax)
         return x
-
-
