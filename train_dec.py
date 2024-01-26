@@ -145,7 +145,7 @@ for epoch in range(args.epoch):
 
         bar.update(N)
 
-        if batch % 200 == 0:
+        if batch % 500 == 0:
             save_models(Dec, Dis)
 
 print("Training Complete!")
