@@ -148,13 +148,55 @@ class Upsample(nn.Module):
         return x
 
 
+class MidBlock(nn.Module):
+    def __init__(self,
+                 input_channels,
+                 output_channels,
+                 cond_channels,
+                 factor=4,
+                 kernel_size=7,
+                 negative_slope=0.1):
+        super().__init__()
+        self.negative_slope = negative_slope
+
+        self.c1 = DCC(input_channels, input_channels, 3, 1)
+        self.c2 = DCC(input_channels, input_channels, 3, 3)
+        self.film1 = FiLM(input_channels, cond_channels)
+        self.c3 = DCC(input_channels, input_channels, 3, 9)
+        self.c4 = DCC(input_channels, input_channels, 3, 9)
+        self.film2 = FiLM(input_channels, cond_channels)
+
+        self.out_conv = nn.Conv1d(input_channels, output_channels, 1)
+
+    def forward(self, x, c):
+        x = self.up(x)
+        c = self.up(c)
+        res = x
+        x = F.leaky_relu(x, self.negative_slope)
+        x = self.c1(x)
+        x = F.leaky_relu(x, self.negative_slope)
+        x = self.c2(x)
+        x = self.film1(x, c)
+        x = x + res
+        res = x
+        x = F.leaky_relu(x, self.negative_slope)
+        x = self.c3(x)
+        x = F.leaky_relu(x, self.negative_slope)
+        x = self.c4(x)
+        x = self.film2(x, c)
+        x = x + res
+        x = self.out_conv(x)
+        return x
+
+
+
 class Decoder(nn.Module):
     def __init__(self,
                  channels=[192, 96, 48, 24],
                  factors=[4, 4, 4, 5],
-                 cond_channels=[192, 96, 48, 24],
+                 cond_channels=[128, 64, 32, 16],
                  num_harmonics=0, # F0 sinewave only
-                 content_channels=256,
+                 content_channels=512,
                  sample_rate=16000,
                  frame_size=320,
                  ):
@@ -163,11 +205,10 @@ class Decoder(nn.Module):
         self.sample_rate = sample_rate
         self.frame_size = frame_size
 
-        self.e2v = Energy2Vec(64)
-        self.p2v = Pitch2Vec(64)
-        self.content_in = nn.Conv1d(content_channels, channels[0], 1)
-        self.film = FiLM(channels[0], 64)
-        
+        self.e2v = Energy2Vec(128)
+        self.p2v = Pitch2Vec(128)
+        self.mid_block = MidBlock(content_channels, channels[0], 128)
+
         # initialize downsample layers
         self.down_input = nn.Conv1d(num_harmonics + 2, cond_channels[-1], 1)
         self.downs = nn.ModuleList([])
@@ -209,8 +250,10 @@ class Decoder(nn.Module):
             sines = d(sines)
             skips.append(sines)
 
-        # upsamples
         cond = self.e2v(e) + self.p2v(p)
+        x = self.mid_block(x, cond)
+
+        # upsamples
         x = self.content_in(x)
         x = self.film(x, cond)
         for u, s in zip(self.ups, reversed(skips)):
