@@ -123,6 +123,7 @@ for epoch in range(args.epoch):
 
             loss_adv = 0
             for logit in Dis.logits(cut_center(fake)):
+                logit[logit.isnan()] = 0
                 loss_adv += (logit ** 2).mean()
             loss_stft = stft_loss(fake, wave)
             loss_mel = logmel_loss(fake, wave)
@@ -139,8 +140,10 @@ for epoch in range(args.epoch):
         with torch.cuda.amp.autocast(enabled=args.fp16):
             loss_d = 0
             for logit in Dis.logits(cut_center(wave)):
+                logit[logit.isnan] = 0
                 loss_d += (logit ** 2).mean()
             for logit in Dis.logits(cut_center(fake)):
+                logit[logit.isnan] = 0
                 loss_d += ((logit - 1) ** 2).mean()
 
         scaler.scale(loss_d).backward()
