@@ -47,28 +47,6 @@ def oscillate_harmonics(f0,
     return harmonics, phi
 
 
-class Downsample(nn.Module):
-    def __init__(self, input_channels, output_channels, factor=4, negative_slope=0.1):
-        super().__init__()
-        self.negative_slope = negative_slope
-        self.down = nn.AvgPool1d(factor)
-        self.down_res = nn.Conv1d(input_channels, output_channels, 1)
-        self.c1 = DCC(input_channels, input_channels, 3, 1)
-        self.c2 = DCC(input_channels, input_channels, 3, 2)
-        self.c3 = DCC(input_channels, output_channels, 3, 4)
-
-    def forward(self, x):
-        x = self.down(x)
-        res = self.down_res(x)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = self.c1(x)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = self.c2(x)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = self.c3(x)
-        return x + res
-
-
 class Pitch2Vec(nn.Module):
     def __init__(self, cond_channels):
         super().__init__()
@@ -105,18 +83,36 @@ class FiLM(nn.Module):
         return x
 
 
+class Downsample(nn.Module):
+    def __init__(self, input_channels, output_channels, factor=4, negative_slope=0.1):
+        super().__init__()
+        self.negative_slope = negative_slope
+        self.down = nn.AvgPool1d(factor)
+        self.down_res = nn.Conv1d(input_channels, output_channels, 1)
+        self.c1 = DCC(input_channels, input_channels, 3, 1)
+        self.c2 = DCC(input_channels, input_channels, 3, 2)
+        self.c3 = DCC(input_channels, output_channels, 3, 4)
+
+    def forward(self, x):
+        x = self.down(x)
+        res = self.down_res(x)
+        x = F.leaky_relu(x, self.negative_slope)
+        x = self.c1(x)
+        x = F.leaky_relu(x, self.negative_slope)
+        x = self.c2(x)
+        x = F.leaky_relu(x, self.negative_slope)
+        x = self.c3(x)
+        return x + res
+
+
 class Upsample(nn.Module):
     def __init__(self,
                  input_channels,
                  output_channels,
                  cond_channels,
-                 factor=4,
-                 kernel_size=7,
                  negative_slope=0.1):
         super().__init__()
         self.negative_slope = negative_slope
-
-        self.up = nn.Upsample(scale_factor=factor, mode='linear')
 
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 3)
@@ -128,8 +124,6 @@ class Upsample(nn.Module):
         self.out_conv = nn.Conv1d(input_channels, output_channels, 1)
 
     def forward(self, x, c):
-        x = self.up(x)
-        c = self.up(c)
         res = x
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
@@ -154,7 +148,6 @@ class MidBlock(nn.Module):
                  output_channels,
                  cond_channels,
                  factor=4,
-                 kernel_size=7,
                  negative_slope=0.1):
         super().__init__()
         self.negative_slope = negative_slope
@@ -187,7 +180,6 @@ class MidBlock(nn.Module):
         x = x + res
         x = self.out_conv(x)
         return x
-
 
 
 class Decoder(nn.Module):
