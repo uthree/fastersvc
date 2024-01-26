@@ -11,7 +11,7 @@ def safe_log(x):
 class MultiScaleSTFTLoss(nn.Module):
     def __init__(
             self,
-            scales=[64, 128, 256, 512, 1024, 2048, 4096, 8192],
+            scales=[64, 128, 256, 512, 1024, 2048],
             alpha=1.0):
         super().__init__()
         self.scales = scales
