@@ -5,7 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .content_encoder import ContentEncoder
-from .speaker_encoder import SpeakerEncoder
 from .pitch_estimator import PitchEstimator
 from .decoder import Decoder
 from .common import energy, match_features
@@ -17,7 +16,6 @@ class Convertor(nn.Module):
         super().__init__()
         self.content_encoder = ContentEncoder().eval()
         self.pitch_estimator = PitchEstimator().eval()
-        self.speaker_encoder = SpeakerEncoder().eval()
         self.decoder = Decoder().eval()
         self.frame_size = frame_size
 
@@ -28,7 +26,7 @@ class Convertor(nn.Module):
 
     def encode_target(self, wave, stride=4):
         tgt = self.content_encoder.encode(wave)
-        return tgt[:, ::stride]
+        return tgt[:, :, ::stride]
 
     def convert(self, wave, tgt, pitch_shift=0, k=4, alpha=0):
         # Conversion
