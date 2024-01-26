@@ -18,7 +18,7 @@ parser.add_argument('-m', '--models', default='./models/')
 parser.add_argument('-p', '--pitch-shift', default=0, type=float)
 parser.add_argument('-t', '--target', default='NONE')
 parser.add_argument('-d', '--device', default='cpu')
-parser.add_argument('-a', '--alpha', default=0.5, type=float)
+parser.add_argument('-a', '--alpha', default=1.0, type=float)
 parser.add_argument('--chunk', default=48000)
 
 args = parser.parse_args()

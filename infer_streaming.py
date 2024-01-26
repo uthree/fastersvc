@@ -94,7 +94,7 @@ def convert_rt(convertor,
                spk,
                pitch_shift,
                sample_rate=44100,
-               alpha=0.5):
+               alpha=1.0):
     # extract buffer variables
     audio_buffer, phase_buffer = buffer
 
