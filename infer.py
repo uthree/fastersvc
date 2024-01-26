@@ -16,10 +16,10 @@ parser.add_argument('-i', '--inputs', default="./inputs/")
 parser.add_argument('-o', '--outputs', default="./outputs/")
 parser.add_argument('-m', '--models', default='./models/')
 parser.add_argument('-p', '--pitch-shift', default=0, type=float)
-parser.add_argument('-t', '--target', default='NONE')
+parser.add_argument('-t', '--target', default='./target.wav')
 parser.add_argument('-d', '--device', default='cpu')
-parser.add_argument('-a', '--alpha', default=1.0, type=float)
-parser.add_argument('--chunk', default=48000)
+parser.add_argument('-a', '--alpha', default=0, type=float)
+parser.add_argument('--chunk', default=16000)
 
 args = parser.parse_args()
 
@@ -33,16 +33,13 @@ if not os.path.exists(args.outputs):
     os.mkdir(args.outputs)
 
 
-if args.target == 'NONE':
-    spk = torch.zeros(1, 256, 1, device=device)
-else:
-    print("Loading target...")
-    wf, sr = torchaudio.load(args.target)
-    wf = wf.to(device)
-    wf = resample(wf, sr, 48000)
-    wf = wf[:1]
-    print("Encoding target...")
-    spk = convertor.encode_speaker(wf)
+print("Loading target...")
+wf, sr = torchaudio.load(args.target)
+wf = wf.to(device)
+wf = resample(wf, sr, 16000)
+wf = wf[:1]
+print("Encoding...")
+tgt = convertor.encode_target(wf)
 
 
 paths = glob.glob(os.path.join(args.inputs, "*"))
@@ -50,7 +47,7 @@ for i, path in enumerate(paths):
     wf, sr = torchaudio.load(path)
     wf_in = wf
     wf = wf.to('cpu')
-    wf = resample(wf, sr, 48000)
+    wf = resample(wf, sr, 16000)
     wf = wf.mean(dim=0, keepdim=True)
     total_length = wf.shape[1]
     
@@ -67,12 +64,12 @@ for i, path in enumerate(paths):
         for chunk in tqdm(chunks):
             chunk = chunk.squeeze(1)
 
-            chunk = convertor.convert(chunk.to(device), spk, args.pitch_shift, args.alpha)
+            chunk = convertor.convert(chunk.to(device), tgt, args.pitch_shift, alpha=alpha)
 
             chunk = chunk[:, args.chunk:-args.chunk]
             result.append(chunk.to('cpu'))
         wf = torch.cat(result, dim=1)[:, :total_length]
-        wf = resample(wf, 48000, sr)
+        wf = resample(wf, 16000, sr)
     wf = wf.cpu().detach()
     file_name = f"{os.path.splitext(os.path.basename(path))[0]}"
     torchaudio.save(os.path.join(args.outputs, f"{file_name}.wav"), src=wf, sample_rate=sr)

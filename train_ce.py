@@ -12,18 +12,18 @@ from tqdm import tqdm
 
 from module.dataset import WaveFileDirectory
 from module.content_encoder import ContentEncoder
-from transformers import HubertForCTC
+from transformers import HubertModel
 
 parser = argparse.ArgumentParser(description="distillation of hubert")
 
 parser.add_argument('dataset')
-parser.add_argument('--hubert', default='facebook/hubert-large-ls960-ft')
+parser.add_argument('--hubert', default='facebook/hubert-base-ls960')
 parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
 parser.add_argument('-e', '--epoch', default=1000, type=int)
 parser.add_argument('-b', '--batch-size', default=16, type=int)
-parser.add_argument('-len', '--length', default=122880, type=int)
+parser.add_argument('-len', '--length', default=64000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
@@ -56,9 +56,7 @@ scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 
 Opt = optim.RAdam(CE.parameters(), lr=args.learning_rate)
 
-hubert = HubertForCTC.from_pretrained(args.hubert).to(device).eval()
-
-cross_entropy = nn.CrossEntropyLoss()
+hubert = HubertModel.from_pretrained(args.hubert).to(device).eval()
 
 # Training
 step_count = 0
@@ -71,16 +69,17 @@ for epoch in range(args.epoch):
         wave = wave.to(device)
 
         with torch.cuda.amp.autocast(enabled=args.fp16):
-            wave_16k = resample(wave, 48000, 16000)
             with torch.no_grad():
-                hubert_features = hubert(wave_16k).logits
+                h = hubert(wave, output_hidden_states=True).hidden_states
+                hubert_features = (h[4] + h[9]) / 2 # based https://arxiv.org/pdf/2110.13900.pdf Fig. 2
                 hubert_features = hubert_features.transpose(1, 2)
 
         Opt.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
-            z = CE.encode_train(wave, softmax=False)
-            labels = F.interpolate(hubert_features, z.shape[2]).argmax(dim=1)
-            loss = cross_entropy(z, labels)
+            z = CE.encode(wave)
+            pred_features = CE.to_hubert(z)
+            hubert_features = F.interpolate(hubert_features, pred_features.shape[2])
+            loss = (pred_features - hubert_features).abs().mean()
 
         scaler.scale(loss).backward()
         scaler.step(Opt)

@@ -64,11 +64,10 @@ print("Exporting Decoder")
 z = torch.randn(1, 32, 100) # content
 p = torch.randn(1, 1, 100) # pitch
 e = torch.randn(1, 1, 100) # energy
-spk = torch.randn(1, 256, 1) # speaker
 src = torch.randn(1, 2, 48000) # source signal (0: sinewave, 1: noise)
 torch.onnx.export(
         convertor.decoder,
-        (z, p, e, spk, src),
+        (z, p, e, src),
         os.path.join(args.outputs, "decoder.onnx"),
         opset_version=opset_version,
         input_names=["content", "pitch", "energy", "speaker", "source"],

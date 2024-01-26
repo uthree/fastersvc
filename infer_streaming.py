@@ -11,11 +11,11 @@ import numpy as np
 import pyaudio
 
 from module.convertor import Convertor
-from module.common import energy
+from module.common import energy, match_features
 
 
-FRAME_SIZE=480
-INTERNAL_SR=48000
+FRAME_SIZE=320
+INTERNAL_SR=16000
 
 
 # Oscillate harmonic signal for realtime inferencing
@@ -33,8 +33,8 @@ INTERNAL_SR=48000
 # length = Frames * frame_size
 def oscillate_harmonics(f0,
                         phase=0,
-                        frame_size=480,
-                        sample_rate=48000,
+                        frame_size=320,
+                        sample_rate=16000,
                         num_harmonics=0,
                         begin_point=0):
     N = f0.shape[0]
@@ -91,10 +91,11 @@ def init_buffer(buffer_size, num_harmonics, device='cpu'):
 def convert_rt(convertor,
                chunk,
                buffer,
-               spk,
+               tgt,
                pitch_shift,
-               sample_rate=44100,
-               alpha=1.0):
+               sample_rate=16000,
+               k=4,
+               alpha=0):
     # extract buffer variables
     audio_buffer, phase_buffer = buffer
 
@@ -106,7 +107,7 @@ def convert_rt(convertor,
     x = torch.cat([audio_buffer, chunk], dim=1)
         
     # encode content, estimate energy, estimate pitch
-    z = convertor.content_encoder.encode_infer(x, alpha)
+    z = convertor.content_encoder.encode_infer(x)
     p = convertor.pitch_estimator.estimate(x)
     e = energy(x, FRAME_SIZE)
 
@@ -121,8 +122,11 @@ def convert_rt(convertor,
     # get new phase buffer
     new_phase_buffer = phase_out[:, :, -1].unsqueeze(2)
 
+    # match features
+    z = match_features(z, tgt, k, alpha)
+
     # synthesize voice
-    y = convertor.decoder(z, p, e, spk, src)
+    y = convertor.decoder(z, p, e, src)
 
     audio_out = y[:, buffer_size:]
     left_shift = FRAME_SIZE * 3
@@ -139,13 +143,12 @@ parser.add_argument('-l', '--loopback', default=-1, type=int)
 parser.add_argument('-p', '--pitch-shift', default=0, type=float)
 parser.add_argument('-m', '--models', default='./models/')
 parser.add_argument('-t', '--target', default='NONE')
-parser.add_argument('-c', '--chunk', default=3840, type=int)
+parser.add_argument('-c', '--chunk', default=1280, type=int)
 parser.add_argument('-b', '--buffer', default=2, type=int)
 parser.add_argument('-d', '--device', default='cpu')
-parser.add_argument('-sr', '--sample-rate', default=48000, type=int)
+parser.add_argument('-sr', '--sample-rate', default=16000, type=int)
 parser.add_argument('-ig', '--input-gain', default=0, type=float)
 parser.add_argument('-og', '--output-gain', default=0, type=float)
-parser.add_argument('-a', '--alpha', default=0.2, type=float)
 
 args = parser.parse_args()
 
@@ -157,16 +160,14 @@ convertor.to(device)
 
 audio = pyaudio.PyAudio()
 
-if args.target == 'NONE':
-    spk = torch.zeros(1, 256, 1, device=device)
-else:
-    print("Loading target...")
-    wf, sr = torchaudio.load(args.target)
-    wf = wf.to(device)
-    wf = resample(wf, sr, 48000)
-    wf = wf[:1]
-    print("Encoding target...")
-    spk = convertor.encode_speaker(wf)
+
+print("Loading target...")
+wf, sr = torchaudio.load(args.target)
+wf = wf.to(device)
+wf = resample(wf, sr, 16000)
+wf = wf[:1]
+print("Encoding target...")
+tgt = convertor.encode_target(wf)
 
 stream_input = audio.open(
         format=pyaudio.paInt16,
@@ -203,7 +204,7 @@ while True:
     chunk = chunk.unsqueeze(0) / 32768
     
     chunk = gain(chunk, args.input_gain)
-    chunk, buffer = convert_rt(convertor, chunk, buffer, spk, args.pitch_shift, args.alpha)
+    chunk, buffer = convert_rt(convertor, chunk, buffer, tgt, args.pitch_shift)
     chunk = gain(chunk, args.output_gain)
 
     chunk = chunk.cpu().numpy() * 32768

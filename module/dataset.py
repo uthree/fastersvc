@@ -11,7 +11,7 @@ import random
 
 
 class WaveFileDirectory(torch.utils.data.Dataset):
-    def __init__(self, source_dir_paths=[], length=16000, max_files=-1, sampling_rate=48000):
+    def __init__(self, source_dir_paths=[], length=16000, max_files=-1, sampling_rate=16000):
         super().__init__()
         print("Loading Data")
         self.path_list = []
@@ -45,7 +45,7 @@ class WaveFileDirectory(torch.utils.data.Dataset):
         return len(self.data)
 
 
-def compute_f0_dio(wf, sample_rate=8000, segment_size=480, f0_min=20, f0_max=6000):
+def compute_f0_dio(wf, sample_rate=8000, segment_size=320, f0_min=20, f0_max=6000):
     if wf.ndim == 1:
         device = wf.device
         signal = wf.detach().cpu().numpy()
@@ -65,7 +65,7 @@ def compute_f0_dio(wf, sample_rate=8000, segment_size=480, f0_min=20, f0_max=600
         return pitchs
 
 
-def compute_f0(wf, sample_rate=48000, segment_size=480):
+def compute_f0(wf, sample_rate=16000, segment_size=320):
     l = wf.shape[1]
     wf = resample(wf, sample_rate, 8000)
     pitchs = compute_f0_dio(wf, 8000)
@@ -73,7 +73,7 @@ def compute_f0(wf, sample_rate=48000, segment_size=480):
 
 
 class WaveFileDirectoryWithF0(torch.utils.data.Dataset):
-    def __init__(self, source_dir_paths=[], length=48000, max_files=-1, sampling_rate=48000):
+    def __init__(self, source_dir_paths=[], length=16000, max_files=-1, sampling_rate=16000):
         super().__init__()
         print("Loading Data")
         self.path_list = []

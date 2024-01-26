@@ -1,9 +1,13 @@
 # FasterSVC : modified FastSVC for low-latency realtime inferencing
+## Architecture
+![Architecture](images/fastersvc_architecture.png)
+(The decoder is very similar to that of FastSVC, but with one less FiLM layer and the convolution layer changed to Causal Convolution.)
+
 ## Features
 - streaming inference on CPU (tested on Intel Core i7-10700)
 - low latency (a.c. 0.2 seconds)
 - high quality (based on neural source filter model)
-- fullband sampling rate (48kHz)
+- kNN based style conversion
 - lightweight
 
 ## Requirements
@@ -64,3 +68,5 @@ python3 infer_streaming.py -i <input device id> -o <output device id> -l <loopba
 
 ## References
 - [FastSVC](https://arxiv.org/abs/2011.05731)
+- [kNN-VC](https://arxiv.org/abs/2305.18975)
+- [WavLM](https://arxiv.org/pdf/2110.13900.pdf) (Fig. 2)

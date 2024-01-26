@@ -21,8 +21,8 @@ from .common import DCC
 # length = Frames * frame_size
 def oscillate_harmonics(f0,
                         phase=0,
-                        frame_size=480,
-                        sample_rate=48000,
+                        frame_size=320,
+                        sample_rate=16000,
                         num_harmonics=0):
     N = f0.shape[0]
     Nh = num_harmonics + 1
@@ -121,7 +121,6 @@ class Upsample(nn.Module):
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 3)
         self.film1 = FiLM(input_channels, cond_channels)
-
         self.c3 = DCC(input_channels, input_channels, 3, 9)
         self.c4 = DCC(input_channels, input_channels, 3, 27)
         self.film2 = FiLM(input_channels, cond_channels)
@@ -149,57 +148,25 @@ class Upsample(nn.Module):
         return x
 
 
-class MidBlock(nn.Module):
-    def __init__(self, channels, cond_channels, negative_slope=0.1):
-        super().__init__()
-        self.negative_slope = negative_slope
-        self.c1 = DCC(channels, channels, 3, 1)
-        self.c2 = DCC(channels, channels, 3, 3)
-        self.film1 = FiLM(channels, cond_channels)
-        self.c3 = DCC(channels, channels, 3, 9)
-        self.c4 = DCC(channels, channels, 3, 27)
-        self.film2 = FiLM(channels, cond_channels)
-
-    
-    def forward(self, x, c):
-        res = x
-        F.leaky_relu(x, self.negative_slope)
-        x = self.c1(x)
-        F.leaky_relu(x, self.negative_slope)
-        x = self.c2(x)
-        x = self.film1(x, c)
-        x = x + res
-        res = x
-        F.leaky_relu(x, self.negative_slope)
-        x = self.c3(x)
-        F.leaky_relu(x, self.negative_slope)
-        x = self.c4(x)
-        x = self.film2(x, c)
-        x = x + res
-        return x
-
-
 class Decoder(nn.Module):
     def __init__(self,
                  channels=[192, 96, 48, 24],
-                 factors=[4, 4, 5, 6],
+                 factors=[4, 4, 4, 5],
                  cond_channels=[192, 96, 48, 24],
                  num_harmonics=0, # F0 sinewave only
-                 speaker_channels=256,
-                 content_channels=32,
-                 sample_rate=48000,
-                 frame_size=480,
+                 content_channels=256,
+                 sample_rate=16000,
+                 frame_size=320,
                  ):
         super().__init__()
         self.num_harmonics = num_harmonics
         self.sample_rate = sample_rate
         self.frame_size = frame_size
 
-        
+        self.e2v = Energy2Vec(64)
+        self.p2v = Pitch2Vec(64)
         self.content_in = nn.Conv1d(content_channels, channels[0], 1)
-        self.mid_block = MidBlock(channels[0], speaker_channels)
-        self.e2v = Energy2Vec(speaker_channels)
-        self.p2v = Pitch2Vec(speaker_channels)
+        self.film = FiLM(channels[0], 64)
         
         # initialize downsample layers
         self.down_input = nn.Conv1d(num_harmonics + 2, cond_channels[-1], 1)
@@ -234,7 +201,7 @@ class Decoder(nn.Module):
         source_signals = torch.cat([sines, noises], dim=1)
         return source_signals
 
-    def forward(self, x, p, e, spk, source_signals):
+    def forward(self, x, p, e, source_signals):
         # downsamples
         skips = []
         sines = self.down_input(source_signals)
@@ -243,9 +210,9 @@ class Decoder(nn.Module):
             skips.append(sines)
 
         # upsamples
-        cond = spk + self.e2v(e) + self.p2v(p)
+        cond = self.e2v(e) + self.p2v(p)
         x = self.content_in(x)
-        x = self.mid_block(x, cond)
+        x = self.film(x, cond)
         for u, s in zip(self.ups, reversed(skips)):
             x = u(x, s)
 
@@ -253,7 +220,7 @@ class Decoder(nn.Module):
         x = x.squeeze(1)
         return x
 
-    def synthesize(self, x, p, e, spk):
+    def synthesize(self, x, p, e):
         source_signals = self.generate_source(p)
-        out = self.forward(x, p, e, spk, source_signals)
+        out = self.forward(x, p, e, source_signals)
         return out

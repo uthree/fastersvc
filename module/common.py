@@ -12,19 +12,26 @@ def spectrogram(wave, n_fft, hop_size):
 # wave: [BatchSize, 1, Length]
 # Output: [BatchSize, 1, Frames]
 def energy(wave,
-           frame_size=480):
+           frame_size=320):
     return F.max_pool1d(wave.abs().unsqueeze(1), frame_size * 2, frame_size, frame_size//2)
 
 
-# prob_dist: [BatchSize, NumClasses, Frames]
-# Output: [BatchSize, NumClasses, Frames]
-def probs2onehot(prob_dist, axis=1):
-    max_values, max_indices = prob_dist.max(dim=axis, keepdim=True)
+# source: [BatchSize, Channels, Length]
+# reference: [BatchSize, Channels, Length]
+# Output: [BatchSize, Channels, Length]
+def match_features(source, reference, k=4, alpha=0.0):
+    input_data = source
 
-    one_hot = torch.zeros_like(prob_dist)
-    one_hot.scatter_(axis, max_indices, 1)
+    source = source.transpose(1, 2)
+    reference = reference.transpose(1, 2)
+    source_norm = torch.norm(source, dim=2, keepdim=True)
+    reference_norm = torch.norm(reference, dim=2, keepdim=True)
+    cos_sims = torch.bmm((source / source_norm), (reference / reference_norm).transpose(1, 2))
+    best = torch.topk(cos_sims, k, dim=2)
 
-    return one_hot
+    result = torch.stack([reference[n][best.indices[n]] for n in range(source.shape[0])], dim=0).mean(dim=2)
+    result = result.transpose(1, 2)
+    return result * (1-alpha) + input_data * alpha
 
 
 # Dlilated Causal Convolution

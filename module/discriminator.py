@@ -38,7 +38,7 @@ class ScaleDiscriminator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, scales=[1, 2, 4], norms=[spectral_norm, weight_norm, weight_norm]):
+    def __init__(self, scales=[1, 2, 3], norms=[spectral_norm, weight_norm, weight_norm]):
         super().__init__()
         self.sub_discs = nn.ModuleList([ScaleDiscriminator(s, n) for s, n in zip(scales, norms)])
     
