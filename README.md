@@ -1,7 +1,7 @@
 # FasterSVC : modified FastSVC for low-latency realtime inferencing
 ## Architecture
 ![Architecture](images/fastersvc_architecture.png)
-(The decoder is very similar to that of FastSVC, but with one less FiLM layer and the convolution layer changed to Causal Convolution.)
+(The decoder is very similar to that of FastSVC, but with one less FiLM layer and the convolution layer changed to causal convolution.)
 
 ## Features
 - streaming inference on CPU (tested on Intel Core i7-10700)
