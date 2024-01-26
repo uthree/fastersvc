@@ -110,10 +110,12 @@ class Upsample(nn.Module):
                  input_channels,
                  output_channels,
                  cond_channels,
+                 factor=4,
                  negative_slope=0.1):
         super().__init__()
         self.negative_slope = negative_slope
 
+        self.up = nn.Upsample(scale_factor=factor)
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 3)
         self.film1 = FiLM(input_channels, cond_channels)
@@ -124,6 +126,8 @@ class Upsample(nn.Module):
         self.out_conv = nn.Conv1d(input_channels, output_channels, 1)
 
     def forward(self, x, c):
+        x = self.up(x)
+        c = self.up(c)
         res = x
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
@@ -162,8 +166,6 @@ class MidBlock(nn.Module):
         self.out_conv = nn.Conv1d(input_channels, output_channels, 1)
 
     def forward(self, x, c):
-        x = self.up(x)
-        c = self.up(c)
         res = x
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
@@ -241,13 +243,12 @@ class Decoder(nn.Module):
         for d in self.downs:
             sines = d(sines)
             skips.append(sines)
-
+        
+        # mid block
         cond = self.e2v(e) + self.p2v(p)
         x = self.mid_block(x, cond)
 
         # upsamples
-        x = self.content_in(x)
-        x = self.film(x, cond)
         for u, s in zip(self.ups, reversed(skips)):
             x = u(x, s)
 
