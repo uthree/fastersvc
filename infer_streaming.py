@@ -107,7 +107,7 @@ def convert_rt(convertor,
     x = torch.cat([audio_buffer, chunk], dim=1)
         
     # encode content, estimate energy, estimate pitch
-    z = convertor.content_encoder.encode_infer(x)
+    z = convertor.content_encoder.encode(x)
     p = convertor.pitch_estimator.estimate(x)
     e = energy(x, FRAME_SIZE)
 
