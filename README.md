@@ -1,5 +1,9 @@
 # FasterSVC : modified FastSVC for low-latency realtime inferencing
-## Architecture
+
+Other languages
+ - [日本語](documents/README_ja.md)
+
+## Model architecture
 ![Architecture](images/fastersvc_architecture.png)
 (The decoder is very similar to that of FastSVC, but with one less FiLM layer and the convolution layer changed to causal convolution.)
 
@@ -35,7 +39,7 @@ python3 train_pe.py <dataset path>
 python3 train_ce.py <dataset path>
 ```
 
-3. Train decoder and speaker encoder
+3. Train decoder
 ```sh
 python3 train_dec.py <datset.path>
 ```
