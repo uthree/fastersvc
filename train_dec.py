@@ -143,7 +143,7 @@ for epoch in range(args.epoch):
                 logit[logit.isnan()] = 0
                 loss_d += (logit ** 2).mean()
             for logit in Dis.logits(cut_center(fake)):
-                logit[logit.isnan()] = 0
+                logit[logit.isnan()] = 1
                 loss_d += ((logit - 1) ** 2).mean()
 
         scaler.scale(loss_d).backward()
