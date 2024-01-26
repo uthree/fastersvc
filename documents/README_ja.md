@@ -1,4 +1,5 @@
 # FasterSVC : 低遅延なリアルタイム推論のためのFastSVCの改造
+(このリポジトリは実験段階のものです。内容は予告なく変更される場合があります。)
 
 ## モデル構造
 ![Architecture](../images/fastersvc_architecture.png)

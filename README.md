@@ -1,4 +1,5 @@
 # FasterSVC : modified FastSVC for low-latency realtime inferencing
+(This repository is at an experimental stage. The content is subject to change without prior notice.)
 
 Other languages
  - [日本語](documents/README_ja.md)
