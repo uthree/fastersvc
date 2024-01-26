@@ -92,12 +92,13 @@ for epoch in range(args.epoch):
     tqdm.write(f"Epoch #{epoch}")
     bar = tqdm(total=len(ds))
     for batch, wave in enumerate(dl):
-        wave = wave.to(device)
         N = wave.shape[0]
         
         # train generator and speaker encoder
         OptDec.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
+            wave = wave.to(device) 
+
             z = CE.encode(wave)
             z = match_features(z, z) # self matching
             p = PE.estimate(wave)
