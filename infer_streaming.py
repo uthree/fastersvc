@@ -141,6 +141,7 @@ parser.add_argument('-i', '--input', default=0, type=int)
 parser.add_argument('-o', '--output', default=0, type=int)
 parser.add_argument('-l', '--loopback', default=-1, type=int)
 parser.add_argument('-p', '--pitch-shift', default=0, type=float)
+parser.add_argument('-a', '--alpha', default=0., type=float)
 parser.add_argument('-m', '--models', default='./models/')
 parser.add_argument('-t', '--target', default='NONE')
 parser.add_argument('-c', '--chunk', default=1280, type=int)
@@ -204,7 +205,7 @@ while True:
     chunk = chunk.unsqueeze(0) / 32768
     
     chunk = gain(chunk, args.input_gain)
-    chunk, buffer = convert_rt(convertor, chunk, buffer, tgt, args.pitch_shift)
+    chunk, buffer = convert_rt(convertor, chunk, buffer, tgt, args.pitch_shift, args.alpha)
     chunk = gain(chunk, args.output_gain)
 
     chunk = chunk.cpu().numpy() * 32768
