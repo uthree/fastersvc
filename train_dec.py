@@ -101,10 +101,13 @@ for epoch in range(args.epoch):
             wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
 
             z = CE.encode(wave)
-            z = match_features(z, z) # self matching
+            z_recon = match_features(z, z) # self matching
+            z_convert = match_features(z, z.roll(1, dims=0)) # convert
             p = PE.estimate(wave)
+            p_convert = p * (torch.rand(N, 1, 1, device=device) * 1.5 + 0.5)
             e = energy(wave)
-            fake = Dec.synthesize(z, p, e)
+            recon = Dec.synthesize(z_recon, p, e)
+            fake = Dec.synthesize(z_convert, p_convert, e)
 
             # remove nan
             fake[fake.isnan()] = 0
@@ -114,8 +117,8 @@ for epoch in range(args.epoch):
             for logit in logits:
                 logit[logit.isnan()] = 0
                 loss_adv += (logit ** 2).mean() / len(logits)
-            loss_stft = stft_loss(fake, wave)
-            loss_mel = logmel_loss(fake, wave)
+            loss_stft = stft_loss(recon, wave)
+            loss_mel = logmel_loss(recon, wave)
             loss_g = loss_stft + loss_adv * WEIGHT_ADV
 
         scaler.scale(loss_g).backward()
