@@ -32,7 +32,7 @@ parser.add_argument('-len', '--length', default=32000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
-parser.add_argument('--weight-adv', default=2.5, type=float)
+parser.add_argument('--weight-adv', default=0.2, type=float)
 
 args = parser.parse_args()
 
