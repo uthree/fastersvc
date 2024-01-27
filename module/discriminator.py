@@ -5,7 +5,7 @@ import torchaudio
 from torch.nn.utils import weight_norm, spectral_norm
 
 
-LRELU_SLOPE = 0.1
+LRELU_SLOPE = 0.2
 
 def get_padding(kernel_size, dilation=1):
     return int((kernel_size*dilation - dilation)/2)
@@ -16,13 +16,12 @@ class ScaleDiscriminator(nn.Module):
         super().__init__()
         self.pool = nn.AvgPool1d(scale)
         convs = [
-                nn.Conv1d(1, 16, 41, 3, 21),
+                nn.Conv1d(1, 16, 21, 3, 11),
                 nn.Conv1d(16, 32, 21, 3, 11),
                 nn.Conv1d(32, 64, 21, 3, 11, groups=2),
                 nn.Conv1d(64, 128, 21, 3, 11, groups=4),
                 nn.Conv1d(128, 256, 21, 3, 11, groups=8),
-                nn.Conv1d(256, 512, 11, 3, 5, groups=16),
-                nn.Conv1d(512, 1, 11, 3, 5),
+                nn.Conv1d(256, 1, 11, 3, 5),
                 ]
         self.convs = nn.ModuleList([norm_f(c) for c in convs])
 
