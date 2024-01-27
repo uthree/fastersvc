@@ -98,7 +98,7 @@ for epoch in range(args.epoch):
         # train generator and speaker encoder
         OptDec.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
-            wave = wave.to(device) 
+            wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
 
             z = CE.encode(wave)
             z = match_features(z, z) # self matching
