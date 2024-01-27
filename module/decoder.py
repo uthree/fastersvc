@@ -188,7 +188,7 @@ class Decoder(nn.Module):
     def __init__(self,
                  channels=[192, 96, 48, 24],
                  factors=[4, 4, 4, 5],
-                 cond_channels=[128, 64, 32, 16],
+                 cond_channels=[192, 96, 48, 24],
                  num_harmonics=0, # F0 sinewave only
                  content_channels=512,
                  sample_rate=16000,
