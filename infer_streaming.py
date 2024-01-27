@@ -49,11 +49,11 @@ def oscillate_harmonics(f0,
     fs = f0 * mul
 
     # change length to wave's
-    fs = F.interpolate(fs, Lw)
+    fs = F.interpolate(fs, Lw, mode='linear')
 
     # generate harmonics
     I = torch.cumsum(fs / sample_rate, dim=2) # numerical integration
-    I = I - I[:, :, begin_point].unsqueeze(2)
+    I = I - I[:, :, begin_point-1].unsqueeze(2)
     phi = (I + phase) % 1 # new phase
     theta = 2 * math.pi * phi # convert to radians
     harmonics = torch.sin(theta)
@@ -118,6 +118,7 @@ def convert_rt(convertor,
 
     # oscillate harmonics and noise
     src, phase_out = generate_source(p, phase_buffer, buffer_size)
+    src[:, 1] = 0
 
     # get new phase buffer
     new_phase_buffer = phase_out[:, :, -1].unsqueeze(2)
