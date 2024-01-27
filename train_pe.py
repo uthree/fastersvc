@@ -65,11 +65,11 @@ for epoch in range(args.epoch):
     tqdm.write(f"Epoch #{epoch}")
     bar = tqdm(total=len(ds))
     for batch, (wave, f0) in enumerate(dl):
-        wave = wave.to(device)
+        N = wave.shape[0]
+        wave = wave.to(device) * torch.rand(N, 1, device=device) * 3
         gain = torch.rand(wave.shape[0], 1, device=device) * 0.05
         noise = torch.randn_like(wave)
         wave = wave + noise * gain
-        N = wave.shape[0]
         f0 = f0.to(device)
 
         Opt.zero_grad()
