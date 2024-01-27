@@ -5,7 +5,7 @@ import torchaudio
 from torch.nn.utils import weight_norm, spectral_norm
 
 
-LRELU_SLOPE = 0.2
+LRELU_SLOPE = 0.1
 
 def get_padding(kernel_size, dilation=1):
     return int((kernel_size*dilation - dilation)/2)
