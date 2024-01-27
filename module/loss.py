@@ -11,11 +11,10 @@ def safe_log(x):
 class MultiScaleSTFTLoss(nn.Module):
     def __init__(
             self,
-            scales=[16, 32, 64, 128, 256, 512],
-            alpha=1.0):
+            scales=[16, 32, 64, 128, 256, 512]
+            ):
         super().__init__()
         self.scales = scales
-        self.alpha = alpha
 
     def forward(self, x, y):
         loss = 0
@@ -26,7 +25,7 @@ class MultiScaleSTFTLoss(nn.Module):
             window = torch.hann_window(n_fft, device=x.device)
             x_spec = torch.stft(x, n_fft, hop_length, return_complex=True, window=window).abs()
             y_spec = torch.stft(y, n_fft, hop_length, return_complex=True, window=window).abs()
-            loss += (x_spec - y_spec).abs().mean() + self.alpha * (safe_log(x_spec) - safe_log(y_spec)).abs().mean()
+            loss += ((x_spec - y_spec) ** 2).mean() + (safe_log(x_spec) - safe_log(y_spec)).abs().mean()
         return loss / num_scales
 
 
