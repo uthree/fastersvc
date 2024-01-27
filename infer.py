@@ -71,5 +71,7 @@ for i, path in enumerate(paths):
         wf = torch.cat(result, dim=1)[:, :total_length]
         wf = resample(wf, 16000, sr)
     wf = wf.cpu().detach()
+    # normalize 
+    wf = wf / (wf.abs().max() + 1e-8)
     file_name = f"{os.path.splitext(os.path.basename(path))[0]}"
     torchaudio.save(os.path.join(args.outputs, f"{file_name}.wav"), src=wf, sample_rate=sr)
