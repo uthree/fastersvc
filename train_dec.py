@@ -32,7 +32,7 @@ parser.add_argument('-len', '--length', default=32000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
-parser.add_argument('--weight-adv', default=0.2, type=float)
+parser.add_argument('--weight-adv', default=2.0, type=float)
 
 args = parser.parse_args()
 
@@ -120,22 +120,23 @@ for epoch in range(args.epoch):
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
 
-        # train discriminator
-        fake = fake.detach()
-        OptDis.zero_grad()
-        with torch.cuda.amp.autocast(enabled=args.fp16):
-            loss_d = 0
-            logits = Dis.logits(wave)
-            for logit in logits:
-                logit[logit.isnan()] = 0
-                loss_d += (logit ** 2).mean() / len(logits)
-            logits = Dis.logits(fake)
-            for logit in logits:
-                logit[logit.isnan()] = 1
-                loss_d += ((logit - 1) ** 2).mean() / len(logits)
+        if step_count % 10 == 0:
+            # train discriminator
+            fake = fake.detach()
+            OptDis.zero_grad()
+            with torch.cuda.amp.autocast(enabled=args.fp16):
+                loss_d = 0
+                logits = Dis.logits(wave)
+                for logit in logits:
+                    logit[logit.isnan()] = 0
+                    loss_d += (logit ** 2).mean() / len(logits)
+                logits = Dis.logits(fake)
+                for logit in logits:
+                    logit[logit.isnan()] = 1
+                    loss_d += ((logit - 1) ** 2).mean() / len(logits)
 
-        scaler.scale(loss_d).backward()
-        scaler.step(OptDis)
+            scaler.scale(loss_d).backward()
+            scaler.step(OptDis)
 
         scaler.update()
 
