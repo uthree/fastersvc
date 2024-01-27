@@ -31,6 +31,7 @@ parser.add_argument('-b', '--batch-size', default=16, type=int)
 parser.add_argument('-len', '--length', default=32000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
+parser.add_argument('--disc-interval', default=5, type=int)
 
 parser.add_argument('--weight-adv', default=2.0, type=float)
 
@@ -120,7 +121,7 @@ for epoch in range(args.epoch):
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
 
-        if step_count % 10 == 0:
+        if step_count % args.disc_interval == 0:
             # train discriminator
             fake = fake.detach()
             OptDis.zero_grad()
