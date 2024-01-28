@@ -113,7 +113,7 @@ for epoch in range(args.epoch):
             fake[fake.isnan()] = 0
 
             loss_adv = 0
-            logits = Dis.logits(fake) + dis.logits(recon)
+            logits = Dis.logits(fake) + Dis.logits(recon)
             for logit in logits:
                 logit[logit.isnan()] = 0
                 loss_adv += (logit ** 2).mean() / len(logits)
