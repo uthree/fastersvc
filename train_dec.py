@@ -80,8 +80,8 @@ dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 
-OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
-OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
+OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
+OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 
 stft_loss = MultiScaleSTFTLoss().to(device)
 logmel_loss = LogMelSpectrogramLoss().to(device)
@@ -117,6 +117,7 @@ for epoch in range(args.epoch):
             for logit in logits:
                 logit[logit.isnan()] = 0
                 loss_adv += (logit ** 2).mean() / len(logits)
+
             loss_stft = stft_loss(recon, wave)
             loss_mel = logmel_loss(recon, wave)
             loss_g = loss_stft + loss_adv * WEIGHT_ADV
