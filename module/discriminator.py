@@ -22,7 +22,7 @@ class ScaleDiscriminator(nn.Module):
                 nn.Conv1d(64, 128, 21, 3, 11, groups=4),
                 nn.Conv1d(128, 256, 41, 3, 21, groups=8),
                 nn.Conv1d(256, 512, 21, 3, 11, groups=16),
-                nn.Conv1d(256, 512, 21, 3, 11, groups=16),
+                nn.Conv1d(512, 512, 21, 3, 11, groups=16),
                 nn.Conv1d(512, 1, 11, 3, 5),
                 ]
         self.convs = nn.ModuleList([norm_f(c) for c in convs])
