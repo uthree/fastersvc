@@ -27,13 +27,13 @@ parser.add_argument('-dep', '--decoder-path', default='models/decoder.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
 parser.add_argument('-e', '--epoch', default=1000, type=int)
-parser.add_argument('-b', '--batch-size', default=16, type=int)
+parser.add_argument('-b', '--batch-size', default=8, type=int)
 parser.add_argument('-len', '--length', default=32000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('--disc-interval', default=3, type=int)
 
-parser.add_argument('--weight-adv', default=0.1, type=float)
+parser.add_argument('--weight-adv', default=2.5, type=float)
 
 args = parser.parse_args()
 
@@ -128,6 +128,7 @@ for epoch in range(args.epoch):
         if step_count % args.disc_interval == 0:
             # train discriminator
             fake = fake.detach()
+            recon = recon.detach()
             OptDis.zero_grad()
             with torch.cuda.amp.autocast(enabled=args.fp16):
                 loss_d = 0
@@ -135,7 +136,7 @@ for epoch in range(args.epoch):
                 for logit in logits:
                     logit[logit.isnan()] = 0
                     loss_d += (logit ** 2).mean() / len(logits)
-                logits = Dis.logits(fake)
+                logits = Dis.logits(fake) + Dis.logits(recon)
                 for logit in logits:
                     logit[logit.isnan()] = 1
                     loss_d += ((logit - 1) ** 2).mean() / len(logits)
