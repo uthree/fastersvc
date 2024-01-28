@@ -1,20 +1,21 @@
-# FasterSVC : 低遅延なリアルタイム推論のためのFastSVCの改造
+# FasterSVC : 蒸留モデルとk近傍法に基づく高速な声質変換
 (このリポジトリは実験段階のものです。内容は予告なく変更される場合があります。)
 
 ## モデル構造
 ![Architecture](../images/fastersvc_architecture.png)
-デコーダーの構造はFastSVCとよく似ているが、FiLM層を一つ減らしたり、"Causal"な畳み込み層に変更したりしている。
+デコーダーの構造はFastSVCやStreamVCを参考に設計。
+未来の情報を参照しない"Causal"な畳み込み層を使用することで低遅延を実現。
 
 ## 特徴
-- ストリーミング変換 (Intel Core i7-10700 にて検証)
-- 低遅延 (a.c. 0.2 seconds)
-- 高品質 (ソースフィルタモデルに基づくため)
-- k近傍法に基づく話者スタイル変換
-- 軽量
+- リアルタイム変換
+- 低遅延 (約0.2秒程度、環境や最適化によって変化する可能性あり。)
+- 位相とピッチが安定している (ソースフィルタモデルに基づく。)
+- k近傍法による話者スタイル変換
 
-## Requirements
-- Python
-- PyTorch と GPU 環境
+## 必要なもの
+- Python 3.10 以降
+- PyTorch 2.0以降と GPU 環境
+- フルスクラッチで訓練する場合は多数の人間の音声データを用意すること。(LJ SpeechやJVS コーパスなど。)
 
 ## インストール
 1. このリポジトリをクローン
@@ -26,27 +27,34 @@ git clone https://github.com/uthree/fastersvc.git
 pip3 install -r requirements.txt
 ```
 
-## 学習
-1. ピッチ推定器を学習
+## 事前学習
+基礎的な音声変換を行うモデルを学習する。この段階では特定の話者に特化したモデルになるわけではないが、基本的な音声合成ができるモデルをあらかじめ用意しておくことで、少しの調整だけで特定の話者に特化したモデルを学習することができる。
+
+以下に手順を示す。
+1. ピッチ推定器を学習  
+WORLDのdioアルゴリズムによるピッチ推定を高速かつ並列に処理可能な1次元CNNで蒸留する。
 ```sh
 python3 train_pe.py <dataset path>
 ```
 
-2. コンテントエンコーダーを学習
+2. コンテンツエンコーダーを学習。  
+HuBERT-baseを蒸留する。WavLMの論文によると、4層と9層にそれぞれ話者情報と音素情報が含まれているので、それらの平均を教師データにする。
 ```sh
 python3 train_ce.py <dataset path>
 ```
 
-3. デコーダーを学習
+3. デコーダーを学習  
+デコーダーは、ピッチとコンテンツから元の波形を再構築することを目標とする。
+
 ```sh
 python3 train_dec.py <datset.path>
 ```
 
-### 学修オプション
+### 学習オプション
 - `-fp16 True` をつけると16ビット浮動小数点数による学習が可能。RTXシリーズのGPUの場合のみ可能。
 - `-b <number>` でバッチサイズを変更。デフォルトは `16`。
-- `-e <number>` でエポック数を変更。 デフォルトは `1000`。
-- `-d <device name>` で演算デバイスを変更。 `cuda`。
+- `-e <number>` でエポック数を変更。 デフォルトは `60`。
+- `-d <device name>` で演算デバイスを変更。 `cuda`。 MacOSの場合は`mps` を利用可能。
 
 ## 推論
 1. `inputs` フォルダを作成する。
@@ -56,7 +64,7 @@ python3 train_dec.py <datset.path>
 python3 infer.py -t <ターゲットの音声ファイル>
 ```
 
-## ストリーミング推論
+## pyaudioによるリアルタイム推論
 1. オーディオデバイスのIDを確認
 ```sh
 python3 audio_device_list.py
@@ -66,9 +74,10 @@ python3 audio_device_list.py
 ```sh
 python3 infer_streaming.py -i <入力デバイスID> -o <出力デバイスID> -l <ループバックデバイスID> -t <ターゲットの音声ファイル>
 ```
-(ループバックはつけなくても動きます。)
+(ループバックのオプションはつけなくても動作します。)
 
 ## 参考文献
 - [FastSVC](https://arxiv.org/abs/2011.05731)
 - [kNN-VC](https://arxiv.org/abs/2305.18975)
 - [WavLM](https://arxiv.org/pdf/2110.13900.pdf) (Fig. 2)
+- [StreamVC](https://arxiv.org/abs/2401.03078v1)

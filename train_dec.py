@@ -26,9 +26,9 @@ parser.add_argument('-dip', '--discriminator-path', default='models/discriminato
 parser.add_argument('-dep', '--decoder-path', default='models/decoder.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
-parser.add_argument('-e', '--epoch', default=1000, type=int)
-parser.add_argument('-b', '--batch-size', default=8, type=int)
-parser.add_argument('-len', '--length', default=32000, type=int)
+parser.add_argument('-e', '--epoch', default=60, type=int)
+parser.add_argument('-b', '--batch-size', default=16, type=int)
+parser.add_argument('-len', '--length', default=16000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('--disc-interval', default=1, type=int)
@@ -101,25 +101,21 @@ for epoch in range(args.epoch):
             wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
 
             z = CE.encode(wave)
-            z_recon = match_features(z, z) # self matching
-            z_convert = match_features(z, z.roll(1, dims=0)) # convert
+            z = match_features(z, z) # self matching
             p = PE.estimate(wave)
-            p_convert = p * (torch.rand(N, 1, 1, device=device) * 1.5 + 0.5)
             e = energy(wave)
-            recon = Dec.synthesize(z_recon, p, e)
-            fake = Dec.synthesize(z_convert, p_convert, e)
+            fake = Dec.synthesize(z, p, e)
 
             # remove nan
             fake[fake.isnan()] = 0
 
             loss_adv = 0
-            logits = Dis.logits(fake) + Dis.logits(recon)
+            logits = Dis.logits(fake)
             for logit in logits:
                 logit[logit.isnan()] = 0
                 loss_adv += (logit ** 2).mean() / len(logits)
 
-            loss_stft = stft_loss(recon, wave)
-            loss_mel = logmel_loss(recon, wave)
+            loss_stft = stft_loss(fake, wave)
             loss_g = loss_stft + loss_adv * WEIGHT_ADV
 
         scaler.scale(loss_g).backward()
@@ -128,7 +124,6 @@ for epoch in range(args.epoch):
         if step_count % args.disc_interval == 0:
             # train discriminator
             fake = fake.detach()
-            recon = recon.detach()
             OptDis.zero_grad()
             with torch.cuda.amp.autocast(enabled=args.fp16):
                 loss_d = 0
@@ -136,7 +131,7 @@ for epoch in range(args.epoch):
                 for logit in logits:
                     logit[logit.isnan()] = 0
                     loss_d += (logit ** 2).mean() / len(logits)
-                logits = Dis.logits(fake) + Dis.logits(recon)
+                logits = Dis.logits(fake)
                 for logit in logits:
                     logit[logit.isnan()] = 1
                     loss_d += ((logit - 1) ** 2).mean() / len(logits)
@@ -148,7 +143,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Step {step_count}, D: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, Mel.: {loss_mel.item():.4f}, STFT: {loss_stft.item():.4f}")
+        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, Recon.: {loss_stft.item():.4f}")
 
         bar.update(N)
 
