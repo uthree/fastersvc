@@ -116,31 +116,31 @@ class Upsample(nn.Module):
         self.negative_slope = negative_slope
 
         self.up = nn.Upsample(scale_factor=factor)
-        self.c1 = DCC(input_channels, input_channels, 3, 1)
-        self.c2 = DCC(input_channels, input_channels, 3, 3)
+        self.c1 = DCC(input_channels, input_channels, 5, 1)
+        self.c2 = DCC(input_channels, input_channels, 5, 3)
         self.film1 = FiLM(input_channels, cond_channels)
-        self.c3 = DCC(input_channels, input_channels, 3, 9)
+        self.c3 = DCC(input_channels, input_channels, 5, 9)
         self.c4 = DCC(input_channels, input_channels, 3, 27)
         self.film2 = FiLM(input_channels, cond_channels)
 
-        self.out_conv = nn.Conv1d(input_channels, output_channels, 1)
+        self.out_conv = DCC(input_channels, output_channels, 3, 1)
 
     def forward(self, x, c):
         x = self.up(x)
         c = self.up(c)
         res = x
-        x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c2(x)
         x = self.film1(x, c)
+        x = F.leaky_relu(x, self.negative_slope)
         x = x + res
         res = x
-        x = F.leaky_relu(x, self.negative_slope)
         x = self.c3(x)
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c4(x)
         x = self.film2(x, c)
+        x = F.leaky_relu(x, self.negative_slope)
         x = x + res
         x = self.out_conv(x)
         return x
@@ -156,29 +156,29 @@ class MidBlock(nn.Module):
         super().__init__()
         self.negative_slope = negative_slope
 
-        self.c1 = DCC(input_channels, input_channels, 3, 1)
-        self.c2 = DCC(input_channels, input_channels, 3, 3)
+        self.c1 = DCC(input_channels, input_channels, 5, 1)
+        self.c2 = DCC(input_channels, input_channels, 5, 3)
         self.film1 = FiLM(input_channels, cond_channels)
-        self.c3 = DCC(input_channels, input_channels, 3, 9)
+        self.c3 = DCC(input_channels, input_channels, 5, 9)
         self.c4 = DCC(input_channels, input_channels, 3, 9)
         self.film2 = FiLM(input_channels, cond_channels)
 
-        self.out_conv = nn.Conv1d(input_channels, output_channels, 1)
+        self.out_conv = DCC(input_channels, output_channels, 3)
 
     def forward(self, x, c):
         res = x
-        x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c2(x)
         x = self.film1(x, c)
+        x = F.leaky_relu(x, self.negative_slope)
         x = x + res
         res = x
-        x = F.leaky_relu(x, self.negative_slope)
         x = self.c3(x)
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c4(x)
         x = self.film2(x, c)
+        x = F.leaky_relu(x, self.negative_slope)
         x = x + res
         x = self.out_conv(x)
         return x
