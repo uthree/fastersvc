@@ -17,12 +17,11 @@ class ScaleDiscriminator(nn.Module):
         self.pool = nn.AvgPool1d(scale)
         convs = [
                 nn.Conv1d(1, 16, 21, 3, 11),
-                nn.Conv1d(16, 32, 21, 3, 11),
-                nn.Conv1d(32, 64, 21, 3, 11, groups=2),
-                nn.Conv1d(64, 128, 21, 3, 11, groups=4),
-                nn.Conv1d(128, 256, 21, 3, 11, groups=8),
-                nn.Conv1d(256, 512, 21, 3, 11, groups=16),
-                nn.Conv1d(512, 512, 21, 3, 11, groups=16),
+                nn.Conv1d(16, 32, 41, 3, 21),
+                nn.Conv1d(32, 64, 41, 3, 21, groups=2),
+                nn.Conv1d(64, 128, 41, 3, 21, groups=4),
+                nn.Conv1d(128, 256, 41, 3, 21, groups=8),
+                nn.Conv1d(256, 512, 41, 3, 21, groups=16),
                 nn.Conv1d(512, 1, 11, 3, 5),
                 ]
         self.convs = nn.ModuleList([norm_f(c) for c in convs])
@@ -39,7 +38,7 @@ class ScaleDiscriminator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, scales=[1, 2, 3], norms=[spectral_norm, weight_norm, weight_norm]):
+    def __init__(self, scales=[1, 2, 3], norms=[weight_norm, weight_norm, spectral_norm]):
         super().__init__()
         self.sub_discs = nn.ModuleList([ScaleDiscriminator(s, n) for s, n in zip(scales, norms)])
     
