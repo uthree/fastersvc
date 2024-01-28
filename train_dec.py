@@ -31,7 +31,7 @@ parser.add_argument('-b', '--batch-size', default=8, type=int)
 parser.add_argument('-len', '--length', default=32000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
-parser.add_argument('--disc-interval', default=3, type=int)
+parser.add_argument('--disc-interval', default=1, type=int)
 
 parser.add_argument('--weight-adv', default=2.5, type=float)
 
