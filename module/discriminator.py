@@ -20,7 +20,7 @@ class ScaleDiscriminator(nn.Module):
                 nn.Conv1d(16, 32, 21, 3, 11),
                 nn.Conv1d(32, 64, 21, 3, 11, groups=2),
                 nn.Conv1d(64, 128, 21, 3, 11, groups=4),
-                nn.Conv1d(128, 256, 41, 3, 21, groups=8),
+                nn.Conv1d(128, 256, 21, 3, 11, groups=8),
                 nn.Conv1d(256, 512, 21, 3, 11, groups=16),
                 nn.Conv1d(512, 512, 21, 3, 11, groups=16),
                 nn.Conv1d(512, 1, 11, 3, 5),
