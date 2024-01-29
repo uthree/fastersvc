@@ -34,10 +34,12 @@ parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('--disc-interval', default=1, type=int)
 
 parser.add_argument('--weight-adv', default=2.5, type=float)
+parser.add_argument('--weight-mel', default=45.0, type=float)
 
 args = parser.parse_args()
 
 WEIGHT_ADV = args.weight_adv
+WEIGHT_MEL = args.weight_mel
 
 def load_or_init_models(device=torch.device('cpu')):
     dec = Decoder().to(device)
@@ -116,7 +118,8 @@ for epoch in range(args.epoch):
                 loss_adv += (logit ** 2).mean() / len(logits)
 
             loss_stft = stft_loss(fake, wave)
-            loss_g = loss_stft + loss_adv * WEIGHT_ADV
+            loss_mel = logmel_loss(fake, wave)
+            loss_g = loss_stft + loss_adv * WEIGHT_ADV + loss_mel * WEIGHT_MEL
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
@@ -143,7 +146,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, Recon.: {loss_stft.item():.4f}")
+        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, Recon.: {loss_stft.item():.4f}, Mel.: {loss_mel.item():.4f}")
 
         bar.update(N)
 
