@@ -9,7 +9,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from module.dataset import WaveFileDirectory
-from module.loss import MultiScaleSTFTLoss, LogMelSpectrogramLoss
+from module.loss import MultiScaleSTFTLoss
 from module.pitch_estimator import PitchEstimator
 from module.content_encoder import ContentEncoder
 from module.decoder import Decoder
@@ -33,13 +33,13 @@ parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('--disc-interval', default=1, type=int)
 
-parser.add_argument('--weight-adv', default=2.5, type=float)
-parser.add_argument('--weight-mel', default=45.0, type=float)
+parser.add_argument('--weight-stft', default=45.0, type=float)
+parser.add_argument('--weight-feat', default=2.0, type=float)
 
 args = parser.parse_args()
 
-WEIGHT_ADV = args.weight_adv
-WEIGHT_MEL = args.weight_mel
+WEIGHT_STFT = args.weight_stft
+WEIGHT_FEAT = args.weight_feat
 
 def load_or_init_models(device=torch.device('cpu')):
     dec = Decoder().to(device)
@@ -58,10 +58,10 @@ def save_models(dec, dis):
     print("Complete!")
 
 
-def cut_center(x):
+def cut_center(x, cut_length=16000):
     length = x.shape[1]
     center = length // 2
-    size = length // 2
+    size = cut_length
     return x[:, center-size:center+size]
 
 device = torch.device(args.device)
@@ -86,7 +86,6 @@ OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 
 stft_loss = MultiScaleSTFTLoss().to(device)
-logmel_loss = LogMelSpectrogramLoss().to(device)
 
 # Training
 step_count = 0
@@ -118,8 +117,8 @@ for epoch in range(args.epoch):
                 loss_adv += (logit ** 2).mean() / len(logits)
 
             loss_stft = stft_loss(fake, wave)
-            loss_mel = logmel_loss(fake, wave)
-            loss_g = loss_stft + loss_adv * WEIGHT_ADV + loss_mel * WEIGHT_MEL
+            loss_feat = Dis.feat_loss(cut_center(fake), cut_center(wave))
+            loss_g = loss_adv + loss_stft * WEIGHT_STFT + loss_feat * WEIGHT_FEAT
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
@@ -130,11 +129,11 @@ for epoch in range(args.epoch):
             OptDis.zero_grad()
             with torch.cuda.amp.autocast(enabled=args.fp16):
                 loss_d = 0
-                logits = Dis.logits(wave)
+                logits = Dis.logits(cut_center(wave))
                 for logit in logits:
                     logit[logit.isnan()] = 0
                     loss_d += (logit ** 2).mean() / len(logits)
-                logits = Dis.logits(fake)
+                logits = Dis.logits(cut_center(fake))
                 for logit in logits:
                     logit[logit.isnan()] = 1
                     loss_d += ((logit - 1) ** 2).mean() / len(logits)
@@ -146,7 +145,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, Recon.: {loss_stft.item():.4f}, Mel.: {loss_mel.item():.4f}")
+        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f}, Feat.: {loss_feat.item():.4f}")
 
         bar.update(N)
 

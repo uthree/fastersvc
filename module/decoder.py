@@ -109,15 +109,14 @@ class ResidualUnit(nn.Module):
     def __init__(self, channels, kernel_size=5, dilations=[1, 3], negative_slope=0.1):
         super().__init__()
         self.negative_slope = negative_slope
-        self.c1 = DCC(channels, channels, kernel_size, dilations[0])
-        self.c2 = DCC(channels, channels, kernel_size, dilations[1])
+        self.convs = nn.ModuleList([])
+        for d in dilations:
+            self.convs.append(DCC(channels, channels, kernel_size, d))
 
     def forward(self, x):
         res = x
-        x = F.leaky_relu(x, self.negative_slope)
-        x = self.c1(x)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = self.c2(x)
+        for c in self.convs:
+            x = c(x)
         return res + x
 
 
@@ -162,6 +161,8 @@ class Decoder(nn.Module):
                  content_channels=512,
                  sample_rate=16000,
                  frame_size=320,
+                 dilations=[[1, 3], [2, 6], [3, 9]],
+                 kernel_sizes=[3, 5, 7]
                  ):
         super().__init__()
         self.num_harmonics = num_harmonics
@@ -189,7 +190,7 @@ class Decoder(nn.Module):
         up_next = channels[1:] + [channels[-1]]
         for u, u_n, c_n, f in zip(up, up_next, reversed(cond_next), factors):
             self.ups.append(
-                    Upsample(u, u_n, c_n, f))
+                    Upsample(u, u_n, c_n, f, dilations=dilations, kernel_sizes=kernel_sizes))
 
         # output layer
         self.output_layer = DCC(channels[-1], 1, 3, 1)
