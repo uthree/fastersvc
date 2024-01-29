@@ -23,7 +23,8 @@ if not os.path.exists(args.outputs):
 opset_version = args.opset
 
 print("Exporting pitch estimator")
-dummy_input = torch.randn(1, 961, 100)
+fft_bin = convertor.pitch_estimator.n_fft // 2 + 1
+dummy_input = torch.randn(1, fft_bin, 100)
 torch.onnx.export(
         convertor.pitch_estimator,
         dummy_input,
@@ -35,21 +36,9 @@ torch.onnx.export(
             "input": {0: "batch_size", 2: "length"}})
 
 
-print("Exporting speaker encoder")
-dummy_input = torch.randn(1, 961, 100)
-torch.onnx.export(
-        convertor.speaker_encoder,
-        dummy_input,
-        os.path.join(args.outputs, "speaker_encoder.onnx"),
-        opset_version=opset_version,
-        input_names=["input"],
-        output_names=["output"],
-        dynamic_axes={
-            "input": {0: "batch_size", 2: "length"}})
-
-
 print("Exporting content encoder")
-dummy_input = torch.randn(1, 961, 100)
+fft_bin = convertor.content_encoder.n_fft // 2 + 1
+dummy_input = torch.randn(1, fft_bin, 100)
 torch.onnx.export(
         convertor.content_encoder,
         dummy_input,
@@ -61,16 +50,18 @@ torch.onnx.export(
             "input": {0: "batch_size", 2: "length"}})
 
 print("Exporting Decoder")
-z = torch.randn(1, 32, 100) # content
-p = torch.randn(1, 1, 100) # pitch
-e = torch.randn(1, 1, 100) # energy
-src = torch.randn(1, 2, 48000) # source signal (0: sinewave, 1: noise)
+content_channels = convertor.decoder.content_channels
+frames_per_second = convertor.decoder.sample_rate // convertor.decoder.frame_size
+z = torch.randn(1, content_channels, frames_per_second) # content
+p = torch.randn(1, 1, frames_per_second) # pitch
+e = torch.randn(1, 1, frames_per_second) # energy
+src = torch.randn(1, 2, convertor.decoder.sample_rate) # source signal (0: sinewave, 1: noise)
 torch.onnx.export(
         convertor.decoder,
         (z, p, e, src),
         os.path.join(args.outputs, "decoder.onnx"),
         opset_version=opset_version,
-        input_names=["content", "pitch", "energy", "speaker", "source"],
+        input_names=["content", "pitch", "energy",  "source"],
         output_names=["output"],
         dynamic_axes={
             "content": {0: "batch_size", 2: "length"},

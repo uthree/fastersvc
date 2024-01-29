@@ -167,6 +167,7 @@ class Decoder(nn.Module):
         self.num_harmonics = num_harmonics
         self.sample_rate = sample_rate
         self.frame_size = frame_size
+        self.content_channels = content_channels
 
         self.e2v = Energy2Vec(cond_channels[0])
         self.p2v = Pitch2Vec(cond_channels[0])
