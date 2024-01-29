@@ -19,6 +19,7 @@ parser.add_argument('-p', '--pitch-shift', default=0, type=float)
 parser.add_argument('-t', '--target', default='./target.wav')
 parser.add_argument('-d', '--device', default='cpu')
 parser.add_argument('-a', '--alpha', default=0, type=float)
+parser.add_argument('--normalize', default=False, type=bool)
 parser.add_argument('--chunk', default=16000)
 
 args = parser.parse_args()
@@ -71,7 +72,8 @@ for i, path in enumerate(paths):
         wf = torch.cat(result, dim=1)[:, :total_length]
         wf = resample(wf, 16000, sr)
     wf = wf.cpu().detach()
-    # normalize 
-    wf = wf / (wf.abs().max() + 1e-8)
+    # normalize
+    if args.normalize:
+        wf = wf / (wf.abs().max() + 1e-8)
     file_name = f"{os.path.splitext(os.path.basename(path))[0]}"
     torchaudio.save(os.path.join(args.outputs, f"{file_name}.wav"), src=wf, sample_rate=sr)
