@@ -105,89 +105,59 @@ class Downsample(nn.Module):
         return x + res
 
 
+class ResidualUnit(nn.Module):
+    def __init__(self, channels, kernel_size=5, dilations=[1, 3], negative_slope=0.1):
+        super().__init__()
+        self.negative_slope = negative_slope
+        self.c1 = DCC(channels, channels, kernel_size, dilations[0])
+        self.c2 = DCC(channels, channels, kernel_size, dilations[1])
+
+    def forward(self, x):
+        res = x
+        x = F.leaky_relu(x, self.negative_slope)
+        x = self.c1(x)
+        x = F.leaky_relu(x, self.negative_slope)
+        x = self.c2(x)
+        return res + x
+
+
 class Upsample(nn.Module):
     def __init__(self,
                  input_channels,
                  output_channels,
                  cond_channels,
                  factor=4,
-                 negative_slope=0.1):
+                 negative_slope=0.1,
+                 dilations=[[1, 3], [2, 6], [3, 9]],
+                 kernel_sizes=[3, 5, 7]):
         super().__init__()
         self.negative_slope = negative_slope
-
         self.up = nn.Upsample(scale_factor=factor)
-        self.c1 = DCC(input_channels, input_channels, 5, 1)
-        self.c2 = DCC(input_channels, input_channels, 5, 3)
-        self.film1 = FiLM(input_channels, cond_channels)
-        self.c3 = DCC(input_channels, input_channels, 5, 5)
-        self.c4 = DCC(input_channels, input_channels, 5, 7)
-        self.film2 = FiLM(input_channels, cond_channels)
+        self.film = FiLM(input_channels, cond_channels)
 
-        self.out_conv = DCC(input_channels, output_channels, 5, 1)
+        self.res_units = nn.ModuleList([])
+        for ds, k in zip(dilations, kernel_sizes):
+            self.res_units.append(ResidualUnit(input_channels, k, ds))
+        self.output_layer = DCC(input_channels, output_channels, 3, 1)
 
     def forward(self, x, c):
+        x = self.film(x, c)
         x = self.up(x)
-        c = self.up(c)
-        res = x
-        x = self.c1(x)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = self.c2(x)
-        x = self.film1(x, c)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = x + res
-        res = x
-        x = self.c3(x)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = self.c4(x)
-        x = self.film2(x, c)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = x + res
-        x = self.out_conv(x)
-        return x
-
-
-class MidBlock(nn.Module):
-    def __init__(self,
-                 input_channels,
-                 output_channels,
-                 cond_channels,
-                 factor=4,
-                 negative_slope=0.1):
-        super().__init__()
-        self.negative_slope = negative_slope
-
-        self.c1 = DCC(input_channels, input_channels, 5, 1)
-        self.c2 = DCC(input_channels, input_channels, 5, 3)
-        self.film1 = FiLM(input_channels, cond_channels)
-        self.c3 = DCC(input_channels, input_channels, 5, 9)
-        self.c4 = DCC(input_channels, input_channels, 5, 9)
-        self.film2 = FiLM(input_channels, cond_channels)
-        self.out_conv = DCC(input_channels, output_channels, 5, 1)
-
-    def forward(self, x, c):
-        res = x
-        x = self.c1(x)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = self.c2(x)
-        x = self.film1(x, c)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = x + res
-        res = x
-        x = self.c3(x)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = self.c4(x)
-        x = self.film2(x, c)
-        x = F.leaky_relu(x, self.negative_slope)
-        x = x + res
-        x = self.out_conv(x)
+        xs = None
+        for res_unit in self.res_units:
+            if xs is None:
+                xs = res_unit(x)
+            else:
+                xs += res_unit(x)
+        x = self.output_layer(xs)
         return x
 
 
 class Decoder(nn.Module):
     def __init__(self,
-                 channels=[192, 96, 48, 24],
+                 channels=[256, 128, 64, 32],
                  factors=[4, 4, 4, 5],
-                 cond_channels=[192, 96, 48, 24],
+                 cond_channels=[256, 128, 64, 32],
                  num_harmonics=0, # F0 sinewave only
                  content_channels=512,
                  sample_rate=16000,
@@ -198,9 +168,10 @@ class Decoder(nn.Module):
         self.sample_rate = sample_rate
         self.frame_size = frame_size
 
-        self.e2v = Energy2Vec(128)
-        self.p2v = Pitch2Vec(128)
-        self.mid_block = MidBlock(content_channels, channels[0], 128)
+        self.e2v = Energy2Vec(cond_channels[0])
+        self.p2v = Pitch2Vec(cond_channels[0])
+        self.content_in = nn.Conv1d(content_channels, channels[0], 1)
+        self.content_film = FiLM(channels[0], cond_channels[0])
 
         # initialize downsample layers
         self.down_input = nn.Conv1d(num_harmonics + 2, cond_channels[-1], 1)
@@ -244,8 +215,9 @@ class Decoder(nn.Module):
             skips.append(sines)
         
         # mid block
-        cond = self.e2v(e) + self.p2v(p)
-        x = self.mid_block(x, cond)
+        c = self.e2v(e) + self.p2v(p)
+        x = self.content_in(x)
+        x = self.content_film(x, c)
 
         # upsamples
         for u, s in zip(self.ups, reversed(skips)):

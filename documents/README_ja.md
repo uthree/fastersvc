@@ -3,7 +3,7 @@
 
 ## モデル構造
 ![Architecture](../images/fastersvc_architecture.png)
-デコーダーの構造はFastSVCやStreamVCを参考に設計。
+デコーダーの構造はFastSVCやStreamVC, Hifi-GAN等を参考に設計。
 未来の情報を参照しない"Causal"な畳み込み層を使用することで低遅延を実現。
 
 ## 特徴
@@ -81,3 +81,4 @@ python3 infer_streaming.py -i <入力デバイスID> -o <出力デバイスID> -
 - [kNN-VC](https://arxiv.org/abs/2305.18975)
 - [WavLM](https://arxiv.org/pdf/2110.13900.pdf) (Fig. 2)
 - [StreamVC](https://arxiv.org/abs/2401.03078v1)
+- [Hifi-GAN](https://arxiv.org/abs/2010.05646)

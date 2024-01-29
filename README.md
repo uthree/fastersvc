@@ -6,7 +6,7 @@ Other languages
 
 ## Model architecture
 ![Architecture](images/fastersvc_architecture.png)
-The decoder structure is designed based on FastSVC and StreamVC.
+The structure of the decoder is designed with reference to FastSVC, StreamVC, Hifi-GAN, etc.
 Low latency is achieved by using a "causal" convolution layer that does not refer to future information.
 
 ## Features
@@ -86,5 +86,6 @@ python3 infer_streaming.py -i <input device id> -o <output device id> -l <loopba
 - [kNN-VC](https://arxiv.org/abs/2305.18975)
 - [WavLM](https://arxiv.org/pdf/2110.13900.pdf) (Fig. 2)
 - [StreamVC](https://arxiv.org/abs/2401.03078v1)
+- [Hifi-GAN](https://arxiv.org/abs/2010.05646)
 
 This document is translated from Japanese using ChatGPT.

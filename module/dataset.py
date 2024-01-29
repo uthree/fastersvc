@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchaudio
 
-import pyworld
+import pyworld as pw
 import numpy as np
 from tqdm import tqdm
 

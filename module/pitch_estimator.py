@@ -11,7 +11,7 @@ class PitchEstimator(nn.Module):
                  hop_size=320,
                  internal_channels=256,
                  kernel_size=5,
-                 dilations=[1, 3, 5, 7],
+                 dilations=[1, 3, 5, 1],
                  output_channels=512,
                  f0_min=10
                  ):
