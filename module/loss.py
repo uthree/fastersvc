@@ -34,7 +34,7 @@ class LogMelSpectrogramLoss(nn.Module):
             self,
             sample_rate=16000,
             n_fft=2048,
-            hop_length=256,
+            hop_length=512,
             n_mels=128
             ):
         super().__init__()
