@@ -117,6 +117,7 @@ class ResidualUnit(nn.Module):
         res = x
         for c in self.convs:
             x = c(x)
+            x = F.leaky_relu(x, self.negative_slope)
         return res + x
 
 
