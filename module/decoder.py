@@ -36,7 +36,7 @@ def oscillate_harmonics(f0,
     fs = f0 * mul
 
     # change length to wave's
-    fs = F.interpolate(fs, Lw)
+    fs = F.interpolate(fs, Lw, mode='linear')
 
     # generate harmonics
     I = torch.cumsum(fs / sample_rate, dim=2) # numerical integration
@@ -132,7 +132,7 @@ class Upsample(nn.Module):
                  kernel_sizes=[3, 5, 7]):
         super().__init__()
         self.negative_slope = negative_slope
-        self.up = nn.Upsample(scale_factor=factor)
+        self.up = nn.Upsample(scale_factor=factor, mode='linear')
         self.film = FiLM(input_channels, cond_channels)
 
         self.res_units = nn.ModuleList([])
