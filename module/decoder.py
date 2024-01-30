@@ -199,9 +199,9 @@ class MidBlock(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self,
-                 channels=[256, 128, 64, 32],
+                 channels=[320, 160, 80, 40],
                  factors=[4, 4, 4, 5],
-                 cond_channels=[256, 128, 64, 32],
+                 cond_channels=[320, 160, 80, 40],
                  num_harmonics=0, # F0 sinewave only
                  content_channels=512,
                  sample_rate=16000,
