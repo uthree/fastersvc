@@ -16,7 +16,10 @@ class ScaleDiscriminator(nn.Module):
         super().__init__()
         self.scale = scale
         self.convs = nn.ModuleList([])
-        self.pool = nn.AvgPool1d(scale*2, scale)
+        if scale == 1:
+            self.pool = nn.Identity()
+        else:
+            self.pool = nn.AvgPool1d(scale*2, scale)
         self.input_layer = weight_norm(nn.Conv1d(1, channels, 21, 3, 10))
         c = channels
         g = 1
