@@ -116,9 +116,11 @@ def convert_rt(convertor,
     scale += pitch_shift
     p = 440 * 2 ** ((scale + 9) / 12)
 
+    # shift left FRAME_SIZE * 3
+    left_shift = FRAME_SIZE * 3
+
     # oscillate harmonics and noise
     src, phase_out = generate_source(p, phase_buffer, buffer_size)
-    src[:, 1] = 0
 
     # get new phase buffer
     new_phase_buffer = phase_out[:, :, -1].unsqueeze(2)
@@ -129,7 +131,6 @@ def convert_rt(convertor,
     # synthesize voice
     y = convertor.decoder(z, p, e, src)
 
-    left_shift = FRAME_SIZE * 3
     audio_out = y[:, buffer_size-left_shift:-left_shift]
     new_audio_buffer = x[:, -buffer_size:]
 
