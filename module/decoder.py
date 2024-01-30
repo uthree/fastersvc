@@ -117,22 +117,6 @@ class Downsample(nn.Module):
 
 
 class ResidualUnit1(nn.Module):
-    def __init__(self, channels, kernel_size=5, dilations=[1, 3], negative_slope=0.1):
-        super().__init__()
-        self.negative_slope = negative_slope
-        self.convs = nn.ModuleList([])
-        for d in dilations:
-            self.convs.append(DCC(channels, channels, kernel_size, d))
-
-    def forward(self, x):
-        res = x
-        for c in self.convs:
-            x = c(x)
-            x = F.leaky_relu(x, self.negative_slope)
-        return res + x
-
-
-class ResidualUnit2(nn.Module):
     def __init__(self, channels, kernel_size=5, dilations=[1, 3, 9], negative_slope=0.1):
         super().__init__()
         self.negative_slope = negative_slope
@@ -162,7 +146,7 @@ class Upsample(nn.Module):
                  negative_slope=0.1,
                  dilations=[[1, 3, 9]],
                  kernel_sizes=[5],
-                 residual_unit_type='2'
+                 residual_unit_type='1'
                  ):
         super().__init__()
         self.negative_slope = negative_slope
@@ -170,8 +154,6 @@ class Upsample(nn.Module):
         self.film = FiLM(input_channels, cond_channels)
         if residual_unit_type == '1':
             unit_constructor = ResidualUnit1
-        if residual_unit_type == '2':
-            unit_constructor = ResidualUnit2
 
         self.res_units = nn.ModuleList([])
         for ds, k in zip(dilations, kernel_sizes):
@@ -191,6 +173,30 @@ class Upsample(nn.Module):
         return x
 
 
+class MidBlock(nn.Module):
+    def __init__(self, channels, cond_channels, dilations=[[1, 3, 9]], kernel_sizes=[5], residual_unit_type='1'):
+        super().__init__()
+        self.film = FiLM(channels, cond_channels)
+        self.res_units = nn.ModuleList([])
+        if residual_unit_type == '1':
+            unit_constructor = ResidualUnit1
+        for k, ds in zip(kernel_sizes, dilations):
+            self.res_units.append(
+                    unit_constructor(channels, k, ds))
+        self.output_layer = DCC(channels, channels, 3, 1)
+
+    def forward(self, x, c):
+        x = self.film(x, c)
+        xs = None
+        for res_unit in self.res_units:
+            if xs is None:
+                xs = res_unit(x)
+            else:
+                xs += res_unit(x)
+        x = self.output_layer(x)
+        return x
+
+
 class Decoder(nn.Module):
     def __init__(self,
                  channels=[256, 128, 64, 32],
@@ -201,8 +207,8 @@ class Decoder(nn.Module):
                  sample_rate=16000,
                  frame_size=320,
                  dilations=[[1, 3, 9]],
-                 kernel_sizes=[7],
-                 residual_unit_type='2'
+                 kernel_sizes=[5],
+                 residual_unit_type='1'
                  ):
         super().__init__()
         self.num_harmonics = num_harmonics
@@ -213,7 +219,7 @@ class Decoder(nn.Module):
         self.e2v = Energy2Vec(cond_channels[0])
         self.p2v = Pitch2Vec(cond_channels[0])
         self.content_in = nn.Conv1d(content_channels, channels[0], 1)
-        self.content_film = FiLM(channels[0], cond_channels[0])
+        self.mid_block = MidBlock(channels[0], cond_channels[0], dilations, kernel_sizes, residual_unit_type)
 
         # initialize downsample layers
         self.down_input = nn.Conv1d(num_harmonics + 2, cond_channels[-1], 1)
@@ -264,7 +270,7 @@ class Decoder(nn.Module):
         # mid block
         c = self.e2v(e) + self.p2v(p)
         x = self.content_in(x)
-        x = self.content_film(x, c)
+        x = self.mid_block(x, c)
 
         # upsamples
         for u, s in zip(self.ups, reversed(skips)):
