@@ -20,7 +20,7 @@ class ScaleDiscriminator(nn.Module):
             self.pool = nn.Identity()
         else:
             self.pool = nn.AvgPool1d(scale*2, scale)
-        self.input_layer = weight_norm(nn.Conv1d(1, channels, 21, 3, 10))
+        self.input_layer = weight_norm(nn.Conv1d(1, channels, 21, 1, 10))
         c = channels
         g = 1
         for i in range(num_layers):
