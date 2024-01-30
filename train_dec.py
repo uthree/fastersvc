@@ -34,13 +34,11 @@ parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('--disc-interval', default=1, type=int)
 
 parser.add_argument('--weight-stft', default=1.0, type=float)
-parser.add_argument('--weight-feat', default=2.0, type=float)
 parser.add_argument('--weight-mel', default=45.0, type=float)
 
 args = parser.parse_args()
 
 WEIGHT_STFT = args.weight_stft
-WEIGHT_FEAT = args.weight_feat
 WEIGHT_MEL = args.weight_mel
 
 def load_or_init_models(device=torch.device('cpu')):
@@ -121,8 +119,7 @@ for epoch in range(args.epoch):
 
             loss_stft = stft_loss(fake, wave)
             loss_mel = logmel_loss(fake, wave)
-            loss_feat = Dis.feat_loss(cut_center(fake), cut_center(wave))
-            loss_g = loss_adv + loss_stft * WEIGHT_STFT + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL
+            loss_g = loss_adv + loss_stft * WEIGHT_STFT + loss_mel * WEIGHT_MEL
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
@@ -149,7 +146,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f}, Feat.: {loss_feat.item():.4f}, Mel.: {loss_mel.item():.4f}")
+        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f}, Mel.: {loss_mel.item():.4f}")
 
         bar.update(N)
 
