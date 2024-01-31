@@ -77,7 +77,7 @@ python3 extract_index.py <特定話者の音声ファイルだけがあるフォ
 python3 infer.py -t <ターゲットの音声ファイル>
 ```
 
-## pyaudioによるリアルタイム推論
+## pyaudioによるリアルタイム推論 (テスト段階の機能です)
 1. オーディオデバイスのIDを確認
 ```sh
 python3 audio_device_list.py

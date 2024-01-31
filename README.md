@@ -82,7 +82,7 @@ python3 extract_index.py <Folder containing only audio files of a specific speak
 python3 infer.py -t <target audio file>
 ```
 
-## Realtime Inference with PyAudio
+## Realtime Inference with PyAudio (This is a feature in the testing stage)
 1. Confirm the ID of the audio device
 ```sh
 python3 audio_device_list.py
