@@ -12,7 +12,7 @@ def get_padding(kernel_size, dilation=1):
 
 
 class ScaleDiscriminator(nn.Module):
-    def __init__(self, scale=1, num_layers=4, channels=32):
+    def __init__(self, scale=1, num_layers=6, channels=32):
         super().__init__()
         self.scale = scale
         self.convs = nn.ModuleList([])
