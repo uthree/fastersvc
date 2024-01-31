@@ -30,7 +30,7 @@ git clone https://github.com/uthree/fastersvc.git
 pip3 install -r requirements.txt
 ```
 
-## pre-training
+## Pre-training
 Train a model for basic voice conversion. At this stage, the model is not specialized for a specific speaker, but having a model that can perform basic voice synthesis allows for easy adaptation to a specific speaker with minimal adjustments.
 
 Here are the steps:
@@ -54,6 +54,19 @@ sh
 ```sh
 python3 train_dec.py <datset.path>
 ```
+
+### Fine-tuning
+By adjusting the pre-trained model to a model specialized for conversion to a specific speaker, it is possible to create a more accurate model. This process takes much less time than pre-learning.
+1. Combine only the audio files of a specific speaker into one folder.
+2. Fine tune the decoder.
+```sh
+python3 train_dec.py <Folder containing only audio files of a specific speaker>
+````
+3. Create a dictionary for vector search. This eliminates the need to encode audio files each time.
+```sh
+python3 extract_index.py <Folder containing only audio files of a specific speaker> -o <Dictionary output destination (optional)>
+````
+4. When inferring, you can load arbitrary dictionary data by adding the `-idx <dictionary file>` option.
 
 ### Training Options
 - add `-fp16 True` to accelerate training with float16 if you have RTX series GPU.

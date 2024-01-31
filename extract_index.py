@@ -22,7 +22,7 @@ parser.add_argument('dataset')
 parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
 parser.add_argument('-size', default=2048, type=int)
 parser.add_argument('--stride', default=4, type=int)
-parser.add_argument('-o', '--output', default='index.pt')
+parser.add_argument('-o', '--output', default='models/index.pt')
 parser.add_argument('-d', '--device', default='cpu')
 
 args = parser.parse_args()
@@ -34,7 +34,7 @@ CE.load_state_dict(torch.load(args.content_encoder_path, map_location=device))
 features = []
 total_length = 0
 
-ds = WaveFileDirectory([args.dataset], length=64000)
+ds = WaveFileDirectory([args.dataset], length=16000)
 dl = torch.utils.data.DataLoader(ds, batch_size=1, shuffle=True)
 
 print("Extracting...")
@@ -47,9 +47,9 @@ for i, wave in enumerate(dl):
 
 features = torch.cat(features, dim=2)
 idx = shuffle(features, dim=2)[:, :, :args.size]
-print(idx)
+print(f"Extracted {idx.shape[2]} vectors.")
 
 print("Saving...")
 torch.save(idx, args.output)
 
-print("Complete!")
+print("Complete.")
