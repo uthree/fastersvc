@@ -1,8 +1,8 @@
 # FasterSVC: Fast voice conversion based distillated models and kNN method
 (This repository is in the experimental stage. The content may change without notice.)
 
-Other languages
- - [日本語](documents/README_ja.md)
+Other languages  
+- [日本語](documents/README_ja.md)
 
 ## Model architecture
 ![Architecture](images/fastersvc_architecture.png)
@@ -55,7 +55,7 @@ sh
 python3 train_dec.py <datset.path>
 ```
 
-### Fine-tuning
+## Fine-tuning
 By adjusting the pre-trained model to a model specialized for conversion to a specific speaker, it is possible to create a more accurate model. This process takes much less time than pre-learning.
 1. Combine only the audio files of a specific speaker into one folder.
 2. Fine tune the decoder.
