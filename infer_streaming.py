@@ -164,13 +164,17 @@ convertor.to(device)
 audio = pyaudio.PyAudio()
 
 
-print("Loading target...")
-wf, sr = torchaudio.load(args.target)
-wf = wf.to(device)
-wf = resample(wf, sr, 16000)
-wf = wf[:1]
-print("Encoding target...")
-tgt = convertor.encode_target(wf)
+if args.index == 'NONE':
+    print("Loading target...")
+    wf, sr = torchaudio.load(args.target)
+    wf = wf.to(device)
+    wf = resample(wf, sr, 16000)
+    wf = wf[:1]
+    print("Encoding...")
+    tgt = convertor.encode_target(wf)
+else:
+    print("Loading index...")
+    tgt = torch.load(args.index).to(device)
 
 stream_input = audio.open(
         format=pyaudio.paInt16,

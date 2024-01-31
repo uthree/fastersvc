@@ -18,6 +18,7 @@ class ContentEncoder(nn.Module):
         super().__init__()
         self.n_fft = n_fft
         self.hop_size = hop_size
+        self.output_channels = output_channels
 
         self.input_layer = nn.Conv1d(n_fft // 2 + 1, internal_channels, 1)
 

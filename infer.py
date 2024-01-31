@@ -19,6 +19,7 @@ parser.add_argument('-p', '--pitch-shift', default=0, type=float)
 parser.add_argument('-t', '--target', default='./target.wav')
 parser.add_argument('-d', '--device', default='cpu')
 parser.add_argument('-a', '--alpha', default=0, type=float)
+parser.add_argument('-idx', '--index', default='NONE')
 parser.add_argument('--normalize', default=False, type=bool)
 parser.add_argument('--chunk', default=16000)
 
@@ -34,13 +35,17 @@ if not os.path.exists(args.outputs):
     os.mkdir(args.outputs)
 
 
-print("Loading target...")
-wf, sr = torchaudio.load(args.target)
-wf = wf.to(device)
-wf = resample(wf, sr, 16000)
-wf = wf[:1]
-print("Encoding...")
-tgt = convertor.encode_target(wf)
+if args.index == 'NONE':
+    print("Loading target...")
+    wf, sr = torchaudio.load(args.target)
+    wf = wf.to(device)
+    wf = resample(wf, sr, 16000)
+    wf = wf[:1]
+    print("Encoding...")
+    tgt = convertor.encode_target(wf)
+else:
+    print("Loading index...")
+    tgt = torch.load(args.index).to(device)
 
 
 paths = glob.glob(os.path.join(args.inputs, "*"))

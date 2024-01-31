@@ -17,7 +17,7 @@ from transformers import HubertModel
 parser = argparse.ArgumentParser(description="distillation of hubert")
 
 parser.add_argument('dataset')
-parser.add_argument('--hubert', default='facebook/hubert-base-ls960')
+parser.add_argument('--hubert', default='rinna/japanese-hubert-base')
 parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
