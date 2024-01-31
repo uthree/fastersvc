@@ -48,7 +48,7 @@ class WaveFileDirectory(torch.utils.data.Dataset):
         return len(self.data)
 
 
-def compute_f0_dio(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=8000):
+def compute_f0_dio(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=20000):
     if wf.ndim == 1:
         device = wf.device
         signal = wf.detach().cpu().numpy()
@@ -68,7 +68,7 @@ def compute_f0_dio(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=80
         return pitchs
 
 
-def compute_f0_harvest(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=8000):
+def compute_f0_harvest(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=20000):
     if wf.ndim == 1:
         device = wf.device
         signal = wf.detach().cpu().numpy()
@@ -89,9 +89,9 @@ def compute_f0_harvest(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_ma
 
 def compute_f0(wf, sample_rate=16000, segment_size=320, algorithm='harvest'):
     l = wf.shape[1]
-    wf = resample(wf, sample_rate, 8000)
+    wf = resample(wf, sample_rate, 16000)
     if algorithm == 'harvest':
-        pitchs = compute_f0_dio(wf, 160000)
+        pitchs = compute_f0_harvest(wf, 16000)
     elif algorithm == 'dio':
         pitchs = compute_f0_dio(wf, 16000)
     return F.interpolate(pitchs, l // segment_size, mode='linear')
