@@ -13,7 +13,7 @@ def spectrogram(wave, n_fft, hop_size):
 # Output: [BatchSize, 1, Frames]
 def energy(wave,
            frame_size=320):
-    return F.max_pool1d((wave ** 2).unsqueeze(1), frame_size * 2, frame_size, frame_size//2)
+    return F.max_pool1d((wave ** 2).unsqueeze(1), frame_size)
 
 
 # source: [BatchSize, Channels, Length]
