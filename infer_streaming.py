@@ -131,7 +131,7 @@ def convert_rt(convertor,
     # synthesize voice
     y = convertor.decoder(z, p, e, src)
 
-    audio_out = y[:, buffer_size:]
+    audio_out = y[:, buffer_size-left_shift:-left_shift]
     new_audio_buffer = x[:, -buffer_size:]
 
     return audio_out, (new_audio_buffer, new_phase_buffer)
