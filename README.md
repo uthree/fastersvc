@@ -65,10 +65,14 @@ python3 train_dec.py <Folder containing only audio files of a specific speaker>
 3. Create a dictionary for vector search. This eliminates the need to encode audio files each time.
 ```sh
 python3 extract_index.py <Folder containing only audio files of a specific speaker> -o <Dictionary output destination (optional)>
-````
+```
 4. When inferring, you can load arbitrary dictionary data by adding the `-idx <dictionary file>` option.
 
-### Training Options
+## About decoder learning
+When training the decoder, you can set the weight of the log mel spectrogram loss with `--weight-mel <real number>`. (Default is `5.0`)
+Adjusting this value may change the reproducibility of speaker identity.
+
+## Training Options
 - add `-fp16 True` to accelerate training with float16 if you have RTX series GPU.
 - add `-b <number>` to set batch size. default is `16`.
 - add `-e <number>` to set epoch. default is `60`.
