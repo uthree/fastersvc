@@ -55,7 +55,7 @@ scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 Opt = optim.AdamW(PE.parameters(), lr=args.learning_rate)
 
 weight = torch.ones(PE.output_channels)
-weight[0] = 0.2
+weight[0] = 0.1
 CrossEntropy = nn.CrossEntropyLoss(weight).to(device)
 
 # Training
