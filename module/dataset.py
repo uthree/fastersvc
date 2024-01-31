@@ -48,7 +48,7 @@ class WaveFileDirectory(torch.utils.data.Dataset):
         return len(self.data)
 
 
-def compute_f0_dio(wf, sample_rate=8000, segment_size=320, f0_min=20, f0_max=6000):
+def compute_f0_dio(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=8000):
     if wf.ndim == 1:
         device = wf.device
         signal = wf.detach().cpu().numpy()
@@ -68,15 +68,37 @@ def compute_f0_dio(wf, sample_rate=8000, segment_size=320, f0_min=20, f0_max=600
         return pitchs
 
 
-def compute_f0(wf, sample_rate=16000, segment_size=320):
+def compute_f0_harvest(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=8000):
+    if wf.ndim == 1:
+        device = wf.device
+        signal = wf.detach().cpu().numpy()
+        signal = signal.astype(np.double)
+        f0, t = pw.harvest(signal, sample_rate, f0_floor=f0_min, f0_ceil=f0_max)
+        f0 = torch.from_numpy(f0).to(torch.float)
+        f0 = f0.to(device)
+        f0 = f0.unsqueeze(0).unsqueeze(0)
+        f0 = F.interpolate(f0, wf.shape[0] // segment_size, mode='linear')
+        f0 = f0.squeeze(0)
+        return f0
+    elif wf.ndim == 2:
+        waves = wf.split(1, dim=0)
+        pitchs = [compute_f0_dio(wave[0], sample_rate, segment_size) for wave in waves]
+        pitchs = torch.stack(pitchs, dim=0)
+        return pitchs
+
+
+def compute_f0(wf, sample_rate=16000, segment_size=320, algorithm='harvest'):
     l = wf.shape[1]
     wf = resample(wf, sample_rate, 8000)
-    pitchs = compute_f0_dio(wf, 8000)
+    if algorithm == 'harvest':
+        pitchs = compute_f0_dio(wf, 160000)
+    elif algorithm == 'dio':
+        pitchs = compute_f0_dio(wf, 16000)
     return F.interpolate(pitchs, l // segment_size, mode='linear')
 
 
 class WaveFileDirectoryWithF0(torch.utils.data.Dataset):
-    def __init__(self, source_dir_paths=[], length=16000, max_files=-1, sampling_rate=16000):
+    def __init__(self, source_dir_paths=[], length=16000, max_files=-1, sampling_rate=16000, algorithm='harvest'):
         super().__init__()
         print("Loading Data")
         self.path_list = []
@@ -102,7 +124,7 @@ class WaveFileDirectoryWithF0(torch.utils.data.Dataset):
             for w in waves:
                 if w.shape[1] == length:
                     self.data.append(w[0])
-                    self.f0.append(compute_f0(w)[0])
+                    self.f0.append(compute_f0(w, algorithm=algorithm)[0])
         self.length = length
         print(f"Loaded total {len(self.data)} data.")
 

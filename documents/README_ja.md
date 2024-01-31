@@ -32,7 +32,7 @@ pip3 install -r requirements.txt
 
 以下に手順を示す。
 1. ピッチ推定器を学習  
-WORLDのdioアルゴリズムによるピッチ推定を高速かつ並列に処理可能な1次元CNNで蒸留する。
+WORLDのharvestアルゴリズムによるピッチ推定を高速かつ並列に処理可能な1次元CNNで蒸留する。
 ```sh
 python3 train_pe.py <dataset path>
 ```

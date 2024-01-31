@@ -36,7 +36,7 @@ Train a model for basic voice conversion. At this stage, the model is not specia
 Here are the steps:
 
 1. Train pitch estimator.
-Distill pitch estimation using a fast and parallelizable 1D CNN with the DIO algorithm from WORLD.
+Distill pitch estimation using a fast and parallelizable 1D CNN with the harvest algorithm from WORLD.
 ```sh
 python3 train_pe.py <dataset path>
 ```

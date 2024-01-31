@@ -23,6 +23,7 @@ parser.add_argument('-b', '--batch-size', default=16, type=int)
 parser.add_argument('-len', '--length', default=64000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
+parser.add_argument('algorithm', default='harvest', type=str)
 
 args = parser.parse_args()
 
@@ -45,7 +46,8 @@ PE = load_or_init_models(device)
 ds = WaveFileDirectoryWithF0(
         [args.dataset],
         length=args.length,
-        max_files=args.max_data
+        max_files=args.max_data,
+        algorithm=args.algorithm
         )
 
 dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
