@@ -4,10 +4,12 @@ import os
 import torch
 
 from module.convertor import Convertor
+from module.index import IndexForOnnx
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', '--outputs', default="./onnx/")
 parser.add_argument('-m', '--models', default="./models/")
+parser.add_argument('-idx', '--index', default='NONE')
 parser.add_argument('-opset', default=15, type=int)
 
 args = parser.parse_args()
@@ -68,3 +70,19 @@ torch.onnx.export(
             "pitch": {0: "batch_size", 2: "length"},
             "energy": {0: "batch_size", 2: "length"},
             "source": {0: "batch_size", 2: "length"}})
+
+
+if args.index != 'NONE':
+    print("Exporting Index")
+    vectors = torch.load(args.index)
+    index_matcher = IndexForOnnx(vectors)
+    z = torch.randn(1, content_channels, frames_per_second)
+    torch.onnx.export(
+            index_matcher,
+            (z,),
+            os.path.join(args.outputs, "index.onnx"),
+            opset_version=opset_version,
+            input_names=["input"],
+            output_names=["output"],
+            dynamic_axes={
+                "input": {0: "batch_size", 2: "length"}})

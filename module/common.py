@@ -16,6 +16,8 @@ def energy(wave,
     return F.max_pool1d((wave ** 2).unsqueeze(1), frame_size)
 
 
+# Convert style based kNN
+# 
 # source: [BatchSize, Channels, Length]
 # reference: [BatchSize, Channels, Length]
 # Output: [BatchSize, Channels, Length]
