@@ -9,6 +9,7 @@ from .pitch_estimator import PitchEstimator
 from .decoder import Decoder
 from .common import energy, match_features
 from .adain import encode_style, apply_style
+from .dataset import compute_f0
 
 
 # for inferencing
@@ -29,7 +30,7 @@ class Convertor(nn.Module):
         tgt = self.content_encoder.encode(wave)
         return tgt[:, :, ::stride]
 
-    def convert(self, wave, tgt, pitch_shift=0, k=4, alpha=0, adain=False):
+    def convert(self, wave, tgt, pitch_shift=0, k=4, alpha=0, adain=False, pitch_estimation_algorithm='default'):
         # Conversion
         z = self.content_encoder.encode(wave)
         if adain:
@@ -37,7 +38,10 @@ class Convertor(nn.Module):
             z = apply_style(z, style)
         z = match_features(z, tgt, k, alpha)
         l = energy(wave)
-        p = self.pitch_estimator.estimate(wave)
+        if pitch_estimation_algorithm != 'default':
+            p = compute_f0(wave, algorithm=pitch_estimation_algorithm)
+        else:
+            p = self.pitch_estimator.estimate(wave)
         scale = 12 * torch.log2(p / 440) - 9
         scale += pitch_shift
         p = 440 * 2 ** ((scale + 9) / 12)
