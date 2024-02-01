@@ -95,7 +95,7 @@ class Convertor(nn.Module):
                 self.frame_size,
                 self.sample_rate,
                 self.num_harmonics,
-                begin_point=buffer_size
+                begin_point=buffer_size-1
                 )
         # concatenate sines and noise
         src = torch.cat([sines, noises], dim=1)
@@ -109,7 +109,7 @@ class Convertor(nn.Module):
 
         # return new voice and shift left
         left_shift = self.frame_size * 3
-        audio_out = y[:, buffer_size-left_shift:-left_shift]
+        audio_out = src[:, 0, buffer_size:]
         new_audio_buffer = x[:, -buffer_size:]
 
         return audio_out, (new_audio_buffer, new_phase_buffer)
