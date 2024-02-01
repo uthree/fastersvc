@@ -61,13 +61,20 @@ def oscillate_harmonics(f0,
                         frame_size=320,
                         sample_rate=16000,
                         num_harmonics=0,
-                        begin_point=0):
+                        begin_point=0,
+                        min_frequency=10.0):
     N = f0.shape[0]
     Nh = num_harmonics + 1
     Lf = f0.shape[2]
     Lw = Lf * frame_size
 
     device = f0.device
+
+    # calculate unvoiced / voiced mask
+    uv = (f0 >= min_frequency).to(torch.float)
+
+    # linear interpolate
+    uv = F.interpolate(uv, Lw, mode='linear')
 
     # generate frequency of harmonics
     mul = (torch.arange(Nh, device=device) + 1).unsqueeze(0).unsqueeze(2).expand(N, Nh, Lf)
@@ -78,10 +85,10 @@ def oscillate_harmonics(f0,
 
     # generate harmonics
     I = torch.cumsum(fs / sample_rate, dim=2) # numerical integration
-    I = I - I[:, :, begin_point-1].unsqueeze(2)
+    I = I - I[:, :, begin_point].unsqueeze(2)
     phi = (I + phase) % 1 # new phase
     theta = 2 * math.pi * phi # convert to radians
-    harmonics = torch.sin(theta)
+    harmonics = torch.sin(theta) * uv
 
     return harmonics, phi
 
