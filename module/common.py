@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -39,6 +41,50 @@ def match_features(source, reference, k=4, alpha=0.0):
     result = torch.stack([reference[n][best.indices[n]] for n in range(source.shape[0])], dim=0).mean(dim=2)
     result = result.transpose(1, 2)
     return result * (1-alpha) + input_data * alpha
+
+
+# Oscillate harmonic signal for realtime inferencing
+#
+# Inputs ---
+# f0: [BatchSize, 1, Frames]
+# phase: scaler or [BatchSize, NumHarmonics, 1]
+#
+# Outputs ---
+# (signals, phase)
+# signals: [BatchSize, NumHarmonics, Length]
+# phase: [BatchSize, NumHarmonics Length]
+#
+# phase's range is 0 to 1, multiply 2 * pi if you need radians
+# length = Frames * frame_size
+def oscillate_harmonics(f0,
+                        phase=0,
+                        frame_size=320,
+                        sample_rate=16000,
+                        num_harmonics=0,
+                        begin_point=0):
+    N = f0.shape[0]
+    Nh = num_harmonics + 1
+    Lf = f0.shape[2]
+    Lw = Lf * frame_size
+
+    device = f0.device
+
+    # generate frequency of harmonics
+    mul = (torch.arange(Nh, device=device) + 1).unsqueeze(0).unsqueeze(2).expand(N, Nh, Lf)
+    fs = f0 * mul
+
+    # change length to wave's
+    fs = F.interpolate(fs, Lw, mode='linear')
+
+    # generate harmonics
+    I = torch.cumsum(fs / sample_rate, dim=2) # numerical integration
+    I = I - I[:, :, begin_point-1].unsqueeze(2)
+    phi = (I + phase) % 1 # new phase
+    theta = 2 * math.pi * phi # convert to radians
+    harmonics = torch.sin(theta)
+
+    return harmonics, phi
+
 
 
 # Dlilated Causal Convolution

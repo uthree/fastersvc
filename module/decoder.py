@@ -1,50 +1,8 @@
-import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .common import DCC
-
-
-# Oscillate harmonic signal
-#
-# Inputs ---
-# f0: [BatchSize, 1, Frames]
-# phase: scaler or [BatchSize, NumHarmonics, 1]
-#
-# Outputs ---
-# (signals, phase)
-# signals: [BatchSize, NumHarmonics, Length]
-# phase: [BatchSize, NumHarmonics Length]
-#
-# phase's range is 0 to 1, multiply 2 * pi if you need radians
-# length = Frames * frame_size
-def oscillate_harmonics(f0,
-                        phase=0,
-                        frame_size=320,
-                        sample_rate=16000,
-                        num_harmonics=0):
-    N = f0.shape[0]
-    Nh = num_harmonics + 1
-    Lf = f0.shape[2]
-    Lw = Lf * frame_size
-
-    device = f0.device
-
-    # generate frequency of harmonics
-    mul = (torch.arange(Nh, device=device) + 1).unsqueeze(0).unsqueeze(2).expand(N, Nh, Lf)
-    fs = f0 * mul
-
-    # change length to wave's
-    fs = F.interpolate(fs, Lw, mode='linear')
-
-    # generate harmonics
-    I = torch.cumsum(fs / sample_rate, dim=2) # numerical integration
-    phi = (I + phase) % 1 # new phase
-    theta = 2 * math.pi * phi # convert to radians
-    harmonics = torch.sin(theta)
-
-    return harmonics, phi
+from .common import DCC, oscillate_harmonics
 
 
 class Pitch2Vec(nn.Module):
