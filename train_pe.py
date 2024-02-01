@@ -69,9 +69,11 @@ for epoch in range(args.epoch):
     for batch, (wave, f0) in enumerate(dl):
         N = wave.shape[0]
         wave = wave.to(device) * torch.rand(N, 1, device=device) * 3
-        gain = torch.rand(wave.shape[0], 1, device=device) * 0.05
+        back_voice = wave.roll(1, dims=0)
+        noise_gain = torch.rand(wave.shape[0], 1, device=device) * 0.05
+        back_voice_gain = torch.rand(wave.shape[0], 1, device=device) * 0.2
         noise = torch.randn_like(wave)
-        wave = wave + noise * gain
+        wave = wave + noise_gain * noise + back_voice_gain * back_voice
         f0 = f0.to(device)
 
         Opt.zero_grad()
