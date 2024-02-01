@@ -63,7 +63,7 @@ class Convertor(nn.Module):
         device = chunk.device
         k = int(k)
 
-        # extract buffer variables
+        # extpand buffer variables
         audio_buffer, phase_buffer = buffer
 
         # buffer size and chunk size
