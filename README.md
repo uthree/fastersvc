@@ -30,6 +30,9 @@ git clone https://github.com/uthree/fastersvc.git
 pip3 install -r requirements.txt
 ```
 
+## Download pretrained model
+The model pretrained with the JVS corpus is published [here](https://huggingface.co/uthree/fastersvc-jvs-corpus-pretrained).
+
 ## Pre-training
 Train a model for basic voice conversion. At this stage, the model is not specialized for a specific speaker, but having a model that can perform basic voice synthesis allows for easy adaptation to a specific speaker with minimal adjustments.
 

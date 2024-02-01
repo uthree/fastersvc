@@ -26,6 +26,8 @@ git clone https://github.com/uthree/fastersvc.git
 ```sh
 pip3 install -r requirements.txt
 ```
+## 事前学習モデルをダウンロードする
+JVSコーパスで事前学習したモデルを[こちら](https://huggingface.co/uthree/fastersvc-jvs-corpus-pretrained)にて公開しています。
 
 ## 事前学習
 基礎的な音声変換を行うモデルを学習する。この段階では特定の話者に特化したモデルになるわけではないが、基本的な音声合成ができるモデルをあらかじめ用意しておくことで、少しの調整だけで特定の話者に特化したモデルを学習することができる。
