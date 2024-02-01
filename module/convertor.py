@@ -8,6 +8,7 @@ from .content_encoder import ContentEncoder
 from .pitch_estimator import PitchEstimator
 from .decoder import Decoder
 from .common import energy, match_features
+from .adain import encode_style, apply_style
 
 
 # for inferencing
@@ -28,9 +29,12 @@ class Convertor(nn.Module):
         tgt = self.content_encoder.encode(wave)
         return tgt[:, :, ::stride]
 
-    def convert(self, wave, tgt, pitch_shift=0, k=4, alpha=0):
+    def convert(self, wave, tgt, pitch_shift=0, k=4, alpha=0, adain=False):
         # Conversion
         z = self.content_encoder.encode(wave)
+        if adain:
+            style = encode_style(tgt)
+            z = apply_style(z, style)
         z = match_features(z, tgt, k, alpha)
         l = energy(wave)
         p = self.pitch_estimator.estimate(wave)

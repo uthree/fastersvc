@@ -22,6 +22,7 @@ parser.add_argument('-a', '--alpha', default=0, type=float)
 parser.add_argument('-idx', '--index', default='NONE')
 parser.add_argument('--normalize', default=False, type=bool)
 parser.add_argument('-c', '--chunk', default=0, type=int)
+parser.add_argument('-adain', default=False, type=bool)
 
 args = parser.parse_args()
 
@@ -71,7 +72,7 @@ for i, path in enumerate(paths):
             for chunk in tqdm(chunks):
                 chunk = chunk.squeeze(1)
 
-                chunk = convertor.convert(chunk.to(device), tgt, args.pitch_shift, alpha=args.alpha)
+                chunk = convertor.convert(chunk.to(device), tgt, args.pitch_shift, alpha=args.alpha, adain=args.adain)
 
                 chunk = chunk[:, args.chunk:-args.chunk]
                 result.append(chunk.to('cpu'))
