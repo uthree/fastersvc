@@ -6,10 +6,9 @@ import torch.nn.functional as F
 
 from .content_encoder import ContentEncoder
 from .pitch_estimator import PitchEstimator
-from .decoder import Decoder
+from .decoder import Decoder, compute_f0
 from .common import energy, match_features
 from .adain import encode_style, apply_style
-from .dataset import compute_f0
 
 
 # for inferencing
