@@ -6,7 +6,8 @@ import torch.nn.functional as F
 # wave: [BatchSize, 1, Length]
 # Output: [BatchSize, 1, Frames]
 def spectrogram(wave, n_fft, hop_size):
-    spec = torch.stft(wave, n_fft, hop_size, return_complex=True).abs()
+    window = torch.hann_window(n_fft, device=wave.device)
+    spec = torch.stft(wave, n_fft, hop_size, return_complex=True, window=window).abs()
     return spec[:, :, 1:]
 
 # wave: [BatchSize, 1, Length]
