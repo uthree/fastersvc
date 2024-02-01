@@ -23,7 +23,7 @@ parser.add_argument('-idx', '--index', default='NONE')
 parser.add_argument('--normalize', default=False, type=bool)
 parser.add_argument('-adain', default=False, type=bool)
 parser.add_argument('-pe', '--pitch-estimation', default='default', choices=['default', 'dio', 'harvest'])
-parser.add_argument('-c', '--chunk', default=2560, type=int) # should be n * 320
+parser.add_argument('-c', '--chunk', default=16000, type=int) # should be n * 320
 parser.add_argument('-b', '--buffer', default=1, type=int)
 
 args = parser.parse_args()
