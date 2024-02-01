@@ -86,6 +86,15 @@ Adjusting this value may change the reproducibility of speaker identity.
 python3 infer.py -t <target audio file>
 ```
 
+### Additional options
+- You can set the transparency of the original audio information with `-a <number from 0.0 to 1.0>`.
+- You can normalize the volume with `--normalize True`.
+- You can change the calculation device with `=d <device name>`. Although it may not make much sense since it is originally high speed.
+- Pitch shift can be performed with `-p <scale>`. Useful for voice conversion between men and women.
+
+### Style conversion by AdaIN (experimental feature)
+By adding the `-adain True` option, you can enable the style conversion function by AdaIN. Not available for real-time inference.
+
 ## Realtime Inference with PyAudio (This is a feature in the testing stage)
 1. Confirm the ID of the audio device
 ```sh
