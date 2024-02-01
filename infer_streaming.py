@@ -79,7 +79,7 @@ CHUNK_SIZE = args.chunk
 N_HARM = convertor.decoder.num_harmonics
 
 # initialize buffer
-buffer = convertor.init_buffer(BUFFER_SIZE, N_HARM, device)
+buffer = convertor.init_buffer(BUFFER_SIZE, device)
 
 # inference loop
 print("Converting voice, Ctrl+C to stop conversion")

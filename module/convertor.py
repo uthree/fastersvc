@@ -51,14 +51,14 @@ class Convertor(nn.Module):
 
     # initialize buffer for realtime inferencing
     @torch.inference_mode()
-    def init_buffer(self, buffer_size, num_harmonics, device='cpu'):
+    def init_buffer(self, buffer_size, device='cpu'):
         audio_buffer = torch.zeros(1, buffer_size, device=device)
-        phase_buffer = torch.zeros(1, num_harmonics + 1, 1, device=device)
+        phase_buffer = torch.zeros(1, self.num_harmonics + 1, 1, device=device)
         return audio_buffer, phase_buffer
     
     # convert voice with buffer for realtime inferencing
     @torch.inference_mode()
-    def convert_rt(self, chunk, buffer, tgt, pitch_shift, k=4, alpha=0):
+    def convert_rt(self, chunk, buffer, tgt, pitch_shift, k=4, alpha=0, pitch_estimation='default'):
         N = chunk.shape[0]
         device = chunk.device
         k = int(k)
@@ -76,7 +76,10 @@ class Convertor(nn.Module):
 
         # encode content, estimate energy, estimate pitch
         z = self.content_encoder.encode(x)
-        p = self.pitch_estimator.estimate(x)
+        if pitch_estimation == 'default':
+            p = self.pitch_estimator.estimate(x)
+        else:
+            p = compute_f0(x, algorithm=pitch_estimation)
         e = energy(x, self.frame_size)
 
         # pitch shift
