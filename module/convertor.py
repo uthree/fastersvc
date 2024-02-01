@@ -32,7 +32,7 @@ class Convertor(nn.Module):
         return tgt[:, :, ::stride]
 
     # convert single waveform without buffering
-    @torch.inference_mode
+    @torch.inference_mode()
     def convert(self, wave, tgt, pitch_shift=0, k=4, alpha=0, adain=False, pitch_estimation_algorithm='default'):
         z = self.content_encoder.encode(wave)
         if adain:
@@ -50,8 +50,8 @@ class Convertor(nn.Module):
         return self.decoder.synthesize(z, p, l)
 
     # initialize buffer for realtime inferencing
-    @torch.inference_mode
-    def init_buffer(buffer_size, num_harmonics, device='cpu'):
+    @torch.inference_mode()
+    def init_buffer(self, buffer_size, num_harmonics, device='cpu'):
         audio_buffer = torch.zeros(1, buffer_size, device=device)
         phase_buffer = torch.zeros(1, num_harmonics + 1, 1, device=device)
         return audio_buffer, phase_buffer
@@ -60,6 +60,8 @@ class Convertor(nn.Module):
     @torch.inference_mode()
     def convert_rt(self, chunk, buffer, tgt, pitch_shift, k=4, alpha=0):
         N = chunk.shape[0]
+        device = chunk.device
+        k = int(k)
 
         # extract buffer variables
         audio_buffer, phase_buffer = buffer
@@ -74,7 +76,7 @@ class Convertor(nn.Module):
 
         # encode content, estimate energy, estimate pitch
         z = self.content_encoder.encode(x)
-        p = self.pitch_estimator(x)
+        p = self.pitch_estimator.estimate(x)
         e = energy(x, self.frame_size)
 
         # pitch shift
@@ -83,14 +85,14 @@ class Convertor(nn.Module):
         p = 440 * 2 ** (scale / 12)
 
         # oscillate harmonics and noise
-        noises = torch.rand(N, 1, waveform_length)
+        noises = torch.rand(N, 1, waveform_length, device=device)
         sines, phase_out = oscillate_harmonics(
                 p,
                 phase_buffer,
                 self.frame_size,
                 self.sample_rate,
                 self.num_harmonics,
-                begin_point=self.buffer_size
+                begin_point=buffer_size
                 )
         # concatenate sines and noise
         src = torch.cat([sines, noises], dim=1)

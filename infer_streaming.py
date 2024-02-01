@@ -90,7 +90,13 @@ while True:
     chunk = chunk.unsqueeze(0) / 32768
     
     chunk = gain(chunk, args.input_gain)
-    chunk, buffer = convertor.convert_rt(chunk, buffer, tgt, args.pitch_shift, args.alpha)
+    chunk, buffer = convertor.convert_rt(
+            chunk,
+            buffer,
+            tgt,
+            args.pitch_shift, 
+            alpha=args.alpha
+            )
     chunk = gain(chunk, args.output_gain)
 
     chunk = chunk.cpu().numpy() * 32768
