@@ -104,7 +104,7 @@ class Downsample(nn.Module):
         self.c3 = DCC(input_channels, output_channels, 5, 4)
 
     def forward(self, x):
-        x = F.pad(x, (self.pad_l, self.pad_r))
+        x = F.pad(x, (self.pad_l, self.pad_r), mode='replicate')
         x = self.down(x)
         res = self.down_res(x)
         x = F.leaky_relu(x, self.negative_slope)

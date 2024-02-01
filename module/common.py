@@ -2,6 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from torchaudio.functional import resample
+import numpy as np
+import pyworld as pw
+
 
 # wave: [BatchSize, 1, Length]
 # Output: [BatchSize, 1, Frames]
@@ -51,7 +55,7 @@ class DCC(nn.Module):
         self.pad_size = (kernel_size - 1) * dilation
 
     def forward(self, x):
-        x = F.pad(x, [self.pad_size, 0])
+        x = F.pad(x, [self.pad_size, 0], mode='replicate')
         x = self.conv(x)
         return x
 
