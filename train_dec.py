@@ -58,12 +58,6 @@ def save_models(dec, dis):
     print("Complete!")
 
 
-def cut_center(x, cut_length=16000):
-    length = x.shape[1]
-    center = length // 2
-    size = cut_length
-    return x[:, center-size:center+size]
-
 device = torch.device(args.device)
 
 Dec, Dis = load_or_init_models(device)
