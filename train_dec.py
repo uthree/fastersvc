@@ -130,11 +130,11 @@ for epoch in range(args.epoch):
             OptDis.zero_grad()
             with torch.cuda.amp.autocast(enabled=args.fp16):
                 loss_d = 0
-                logits = Dis.logits(cut_center(wave))
+                logits = Dis.logits(wave)
                 for logit in logits:
                     logit[logit.isnan()] = 0
                     loss_d += (logit ** 2).mean() / len(logits)
-                logits = Dis.logits(cut_center(fake))
+                logits = Dis.logits(fake)
                 for logit in logits:
                     logit[logit.isnan()] = 1
                     loss_d += ((logit - 1) ** 2).mean() / len(logits)
