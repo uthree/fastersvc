@@ -109,7 +109,7 @@ class Convertor(nn.Module):
 
         # return new voice and shift left
         left_shift = self.frame_size * 3
-        audio_out = src[:, 0, buffer_size:]
+        audio_out = y[:, buffer_size:]
         new_audio_buffer = x[:, -buffer_size:]
 
         return audio_out, (new_audio_buffer, new_phase_buffer)
