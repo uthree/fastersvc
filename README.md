@@ -45,7 +45,7 @@ python3 train_pe.py <dataset path>
 ```
 
 2. Train content encoder
-Distill HuBERT-base. According to the WavLM paper, speaker and phoneme information are present in layers 4 and 9, respectively. Use the average of these as teacher data.
+Distill HuBERT-base. According to the WavLM paper, the fourth layer contains speaker information, so it is distilled. (Speaker classification can be performed using linear transformation from the features in the fourth layer.)
 ```sh
 python3 train_ce.py <dataset path>
 ```

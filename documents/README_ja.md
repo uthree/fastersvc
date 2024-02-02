@@ -40,7 +40,7 @@ python3 train_pe.py <dataset path>
 ```
 
 2. コンテンツエンコーダーを学習。  
-HuBERT-baseを蒸留する。WavLMの論文によると、4層と9層にそれぞれ話者情報と音素情報が含まれているので、それらの平均を教師データにする。
+HuBERT-baseを蒸留する。WavLMの論文によると、第4層に話者情報が含まれているので、それを蒸留する。(第4層の特徴量から線形変換で話者分類ができる。)
 ```sh
 python3 train_ce.py <dataset path>
 ```
