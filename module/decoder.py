@@ -33,7 +33,7 @@ class FiLM(nn.Module):
         super().__init__()
         self.to_mu = nn.Conv1d(cond_channels, channels, 1)
         self.to_sigma = nn.Conv1d(cond_channels, channels, 1)
-        torch.nn.init_normal_(self.to_sigma.bias, mean=1.0, std=0.0)
+        torch.nn.init.normal_(self.to_sigma.bias, mean=1.0, std=0.0)
 
     def forward(self, x, c):
         mu = self.to_mu(c)
