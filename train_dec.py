@@ -35,11 +35,13 @@ parser.add_argument('--disc-interval', default=1, type=int)
 
 parser.add_argument('--weight-stft', default=1.0, type=float)
 parser.add_argument('--weight-con', default=10.0, type=float)
+parser.add_argument('--weight-adv', default=1.0, type=float)
 
 args = parser.parse_args()
 
 WEIGHT_STFT = args.weight_stft
 WEIGHT_CON = args.weight_con
+WEIGHT_ADV = args.weight_adv
 
 def load_or_init_models(device=torch.device('cpu')):
     dec = Decoder().to(device)
@@ -112,7 +114,7 @@ for epoch in range(args.epoch):
 
             loss_stft = stft_loss(fake, wave)
             loss_con = (z - CE.encode(fake)).abs().mean()
-            loss_g = loss_adv + loss_stft * WEIGHT_STFT + loss_con * WEIGHT_CON
+            loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT + loss_con * WEIGHT_CON
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
