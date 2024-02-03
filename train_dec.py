@@ -113,7 +113,7 @@ for epoch in range(args.epoch):
                 loss_adv += (logit ** 2).mean() / len(logits)
 
             loss_stft = stft_loss(fake, wave)
-            loss_con = (z - CE.encode(fake)).abs().mean()
+            loss_con = (z.detach - CE.encode(fake)).abs().mean()
             loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT + loss_con * WEIGHT_CON
 
         scaler.scale(loss_g).backward()
