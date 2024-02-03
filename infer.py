@@ -49,8 +49,10 @@ else:
     print("Loading index...")
     tgt = torch.load(args.index).to(device)
 
-
-paths = glob.glob(os.path.join(args.inputs, "*"))
+support_formats = ['wav', 'ogg', 'mp3']
+paths = []
+for fmt in support_formats:
+    paths += glob.glob(os.path.join(args.inputs, "*." + fmt))
 left_shift = convertor.frame_size * 3
 buffer_size = args.buffer * args.chunk
 for i, path in enumerate(paths):
