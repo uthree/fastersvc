@@ -48,6 +48,7 @@ class Discriminator(nn.Module):
 
     def logits(self, x):
         logits = []
+        x = x - x.mean(dim=1, keepdim=True)
         for sd in self.sub_discs:
             logits.append(sd(x))
         return logits
