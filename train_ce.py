@@ -23,7 +23,7 @@ parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
 parser.add_argument('-e', '--epoch', default=60, type=int)
 parser.add_argument('-b', '--batch-size', default=16, type=int)
-parser.add_argument('-len', '--length', default=64000, type=int)
+parser.add_argument('-len', '--length', default=32000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
@@ -77,9 +77,8 @@ for epoch in range(args.epoch):
         Opt.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
             z = CE.encode(wave)
-            pred_features = CE.to_hubert(z)
-            hubert_features = F.interpolate(hubert_features, pred_features.shape[2])
-            loss = (pred_features - hubert_features).abs().mean()
+            hubert_features = F.interpolate(hubert_features, z.shape[2])
+            loss = (z - hubert_features).abs().mean()
 
         scaler.scale(loss).backward()
         scaler.step(Opt)

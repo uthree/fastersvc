@@ -11,5 +11,5 @@ class IndexForOnnx(nn.Module):
         super().__init__()
         self.index = nn.Parameter(index)
 
-    def forward(self, x):
-        return match_features(x, self.index)
+    def forward(self, x, metrics='L2'):
+        return match_features(x, self.index, metrics=metrics)

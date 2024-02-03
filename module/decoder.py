@@ -10,7 +10,7 @@ class Pitch2Vec(nn.Module):
         super().__init__()
         self.c1 = nn.Conv1d(1, cond_channels, 1, 1, 0)
         self.c2 = nn.Conv1d(cond_channels, cond_channels, 1, 1, 0)
-        self.c1.weight.data.normal_(0, 0.5)
+        torch.nn.init.normal_(self.c1.weight, mean=0.0, std=30.0)
 
     def forward(self, x):
         x = self.c1(x)
@@ -33,6 +33,7 @@ class FiLM(nn.Module):
         super().__init__()
         self.to_mu = nn.Conv1d(cond_channels, channels, 1)
         self.to_sigma = nn.Conv1d(cond_channels, channels, 1)
+        torch.nn.init_normal_(self.to_sigma.bias, mean=1.0, std=0.0)
 
     def forward(self, x, c):
         mu = self.to_mu(c)
@@ -161,7 +162,7 @@ class Decoder(nn.Module):
                  factors=[4, 4, 4, 5],
                  cond_channels=[320, 160, 80, 40],
                  num_harmonics=0, # F0 sinewave only
-                 content_channels=512,
+                 content_channels=768,
                  sample_rate=16000,
                  frame_size=320,
                  dilations=[[1, 3, 9]],

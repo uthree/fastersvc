@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser(description="extract index")
 
 parser.add_argument('dataset')
 parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
-parser.add_argument('-size', default=2048, type=int)
+parser.add_argument('-size', default=1024, type=int)
 parser.add_argument('--stride', default=4, type=int)
 parser.add_argument('-o', '--output', default='models/index.pt')
 parser.add_argument('-d', '--device', default='cpu')
