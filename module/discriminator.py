@@ -24,9 +24,9 @@ class ScaleDiscriminator(nn.Module):
         c = channels
         g = 1
         for i in range(num_layers):
-            self.convs.append(weight_norm(nn.Conv1d(c, c * 2, 21, 3, 10, groups=g)))
-            c = c * 2
-            g = g * 2
+            self.convs.append(weight_norm(nn.Conv1d(c, min(c * 2, 512), 21, 3, 10, groups=g)))
+            c = min(c * 2, 512)
+            g = min(g * 2, 8)
         self.output_layer = weight_norm(nn.Conv1d(c, 1, 21, 3, 10))
 
     def forward(self, x):

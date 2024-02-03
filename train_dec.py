@@ -34,7 +34,7 @@ parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('--disc-interval', default=1, type=int)
 
 parser.add_argument('--weight-stft', default=1.0, type=float)
-parser.add_argument('--weight-mel', default=5.0, type=float)
+parser.add_argument('--weight-mel', default=45.0, type=float)
 
 args = parser.parse_args()
 
@@ -76,8 +76,8 @@ dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 
-OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
-OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
+OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
+OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 
 stft_loss = MultiScaleSTFTLoss().to(device)
 logmel_loss = LogMelSpectrogramLoss().to(device)
@@ -113,7 +113,8 @@ for epoch in range(args.epoch):
 
             loss_stft = stft_loss(fake, wave)
             loss_mel = logmel_loss(fake, wave)
-            loss_g = loss_adv + loss_stft * WEIGHT_STFT + loss_mel * WEIGHT_MEL
+            loss_normalize_wave = (fake.mean(dim=1).abs()).mean() * 50.0
+            loss_g = loss_adv + loss_stft * WEIGHT_STFT + loss_mel * WEIGHT_MEL + loss_normalize_wave
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
