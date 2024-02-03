@@ -33,7 +33,7 @@ def energy(wave,
 # alpha: float (0.0 ~ 1.0)
 # metrics: one of ['IP', 'L2', 'cos'], 'IP' means innner product, 'L2' means euclid distance, 'cos' means cosine similarity
 # Output: [BatchSize, Channels, Length]
-def match_features(source, reference, k=8, alpha=0.0, metrics='L2'):
+def match_features(source, reference, k=4, alpha=0.0, metrics='L2'):
     input_data = source
 
     source = source.transpose(1, 2)
@@ -43,8 +43,8 @@ def match_features(source, reference, k=8, alpha=0.0, metrics='L2'):
     elif metrics == 'L2':
         sims = -torch.cdist(source, reference)
     elif metrics == 'cos':
-        reference_norm = torch.norm(reference, dim=2, keepdim=True)
-        source_norm = torch.norm(source, dim=2, keepdim=True)
+        reference_norm = torch.norm(reference, dim=2, keepdim=True) + 1e-6
+        source_norm = torch.norm(source, dim=2, keepdim=True) + 1e-6
         sims = torch.bmm(source / source_norm, (reference / reference_norm).transpose(1, 2))
     best = torch.topk(sims, k, dim=2)
 

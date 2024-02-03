@@ -23,6 +23,8 @@ parser.add_argument('-idx', '--index', default='NONE')
 parser.add_argument('--normalize', default=False, type=bool)
 parser.add_argument('-pe', '--pitch-estimation', default='default', choices=['default', 'dio', 'harvest'])
 parser.add_argument('-c', '--chunk', default=16000, type=int) # should be n * 320
+parser.add_argument('-nc', '--no-chunking', default=False, type=bool)
+parser.add_argument('-adain', default=False, type=bool)
 parser.add_argument('-b', '--buffer', default=1, type=int)
 
 args = parser.parse_args()
@@ -60,24 +62,28 @@ for i, path in enumerate(paths):
     wf, sr = torchaudio.load(path)
     wf = resample(wf, sr, 16000)
     wf = wf.mean(dim=0, keepdim=True)
-    chunks = torch.split(wf, args.chunk, dim=1)
-    results = []
-    buffer = convertor.init_buffer(buffer_size, device=device)
-    for chunk in tqdm(chunks):
-        if chunk.shape[1] < args.chunk:
-            pad_len = args.chunk - chunk.shape[1]
-            chunk = torch.cat([chunk, torch.zeros(1, pad_len)], dim=1)
-        converted_chunk, buffer = convertor.convert_rt(
-                chunk.to(device),
-                buffer,
-                tgt,
-                args.pitch_shift,
-                alpha=args.alpha,
-                pitch_estimation=args.pitch_estimation,
-                )
-        results.append(converted_chunk.cpu())
-    wf = torch.cat(results, dim=1)
-    wf = wf[:, (left_shift):]
+    if args.no_chunking:
+        wf = convertor.convert(wf, tgt, args.pitch_shift, alpha=args.alpha, adain=args.adain,
+                               pitch_estimation_algorithm=args.pitch_estimation)
+    else:
+        chunks = torch.split(wf, args.chunk, dim=1)
+        results = []
+        buffer = convertor.init_buffer(buffer_size, device=device)
+        for chunk in tqdm(chunks):
+            if chunk.shape[1] < args.chunk:
+                pad_len = args.chunk - chunk.shape[1]
+                chunk = torch.cat([chunk, torch.zeros(1, pad_len)], dim=1)
+            converted_chunk, buffer = convertor.convert_rt(
+                    chunk.to(device),
+                    buffer,
+                    tgt,
+                    args.pitch_shift,
+                    alpha=args.alpha,
+                    pitch_estimation=args.pitch_estimation,
+                    )
+            results.append(converted_chunk.cpu())
+        wf = torch.cat(results, dim=1)
+        wf = wf[:, (left_shift):]
     wf = resample(wf, 16000, sr)
     file_name = f"{os.path.splitext(os.path.basename(path))[0]}"
     torchaudio.save(os.path.join(args.outputs, f"{file_name}.wav"), src=wf, sample_rate=sr)
