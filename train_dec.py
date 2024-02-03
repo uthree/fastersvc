@@ -34,7 +34,7 @@ parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('--disc-interval', default=1, type=int)
 
 parser.add_argument('--weight-stft', default=1.0, type=float)
-parser.add_argument('--weight-con', default=10.0, type=float)
+parser.add_argument('--weight-con', default=1.0, type=float)
 parser.add_argument('--weight-adv', default=1.0, type=float)
 
 args = parser.parse_args()
@@ -98,7 +98,7 @@ for epoch in range(args.epoch):
             wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
 
             z = CE.encode(wave)
-            z_prematch = match_features(z, z) # self matching
+            z_prematch = match_features(z, z).detach() # self matching
             p = PE.estimate(wave)
             e = energy(wave)
             fake = Dec.synthesize(z_prematch, p, e)
