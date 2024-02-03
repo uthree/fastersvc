@@ -70,7 +70,7 @@ for epoch in range(args.epoch):
         N = wave.shape[0]
         wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
         back_voice = wave.roll(1, dims=0)
-        noise_gain = torch.rand(wave.shape[0], 1, device=device) * 0.05
+        noise_gain = torch.rand(wave.shape[0], 1, device=device)
         back_voice_gain = torch.rand(wave.shape[0], 1, device=device) * 0.5
         noise = torch.randn_like(wave)
         wave = wave + noise_gain * noise + back_voice_gain * back_voice
