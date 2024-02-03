@@ -37,7 +37,7 @@ def energy(wave,
 # alpha: float (0.0 ~ 1.0)
 # metrics: one of ['IP', 'L2', 'cos'], 'IP' means innner product, 'L2' means euclid distance, 'cos' means cosine similarity
 # Output: [BatchSize, Channels, Length]
-def match_features(source, reference, k=4, alpha=0.0, metrics='L2'):
+def match_features(source, reference, k=4, alpha=0.0, metrics='cos'):
     input_data = source
 
     source = source.transpose(1, 2)

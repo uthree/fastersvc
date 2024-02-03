@@ -82,6 +82,9 @@ class Convertor(nn.Module):
             p = compute_f0(x, algorithm=pitch_estimation)
         e = energy(x, self.frame_size)
 
+        # convert style
+        z = match_features(z, tgt, k, alpha)
+
         # pitch shift
         scale = 12 * torch.log2(p / 440)
         scale += pitch_shift

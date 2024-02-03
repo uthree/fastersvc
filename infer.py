@@ -63,8 +63,9 @@ for i, path in enumerate(paths):
     wf = resample(wf, sr, 16000)
     wf = wf.mean(dim=0, keepdim=True)
     if args.no_chunking:
-        wf = convertor.convert(wf, tgt, args.pitch_shift, alpha=args.alpha, adain=args.adain,
+        wf = convertor.convert(wf.to(device), tgt, args.pitch_shift, alpha=args.alpha, adain=args.adain,
                                pitch_estimation_algorithm=args.pitch_estimation)
+        wf = wf.cpu()
     else:
         chunks = torch.split(wf, args.chunk, dim=1)
         results = []

@@ -34,7 +34,7 @@ parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('--disc-interval', default=1, type=int)
 
 parser.add_argument('--weight-stft', default=1.0, type=float)
-parser.add_argument('--weight-con', default=45.0, type=float)
+parser.add_argument('--weight-con', default=10.0, type=float)
 
 args = parser.parse_args()
 
