@@ -113,8 +113,7 @@ for epoch in range(args.epoch):
 
             loss_stft = stft_loss(fake, wave)
             loss_mel = logmel_loss(fake, wave)
-            loss_wave_normalize = (fake.mean(dim=1) ** 2).mean() * 100.0
-            loss_g = loss_adv + loss_stft * WEIGHT_STFT + loss_mel * WEIGHT_MEL + loss_wave_normalize
+            loss_g = loss_adv + loss_stft * WEIGHT_STFT + loss_mel * WEIGHT_MEL
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
