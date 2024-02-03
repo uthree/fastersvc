@@ -71,10 +71,6 @@ python3 extract_index.py <Folder containing only audio files of a specific speak
 ```
 4. When inferring, you can load arbitrary dictionary data by adding the `-idx <dictionary file>` option.
 
-## About decoder learning
-When training the decoder, you can set the weight of the log mel spectrogram loss with `--weight-mel <real number>`. (Default is `45.0`)
-Adjusting this value may change the reproducibility of speaker identity.
-
 ## Training Options
 - add `-fp16 True` to accelerate training with float16 if you have RTX series GPU.
 - add `-b <number>` to set batch size. default is `16`.

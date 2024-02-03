@@ -12,9 +12,13 @@ import pyworld as pw
 # wave: [BatchSize, 1, Length]
 # Output: [BatchSize, 1, Frames]
 def spectrogram(wave, n_fft, hop_size):
+    dtype = wave.dtype
+    wave = wave.to(torch.float)
     window = torch.hann_window(n_fft, device=wave.device)
     spec = torch.stft(wave, n_fft, hop_size, return_complex=True, window=window).abs()
-    return spec[:, :, 1:]
+    spec = spec[:, :, 1:]
+    spec = spec.to(dtype)
+    return spec
 
 # wave: [BatchSize, 1, Length]
 # Output: [BatchSize, 1, Frames]

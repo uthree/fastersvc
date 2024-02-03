@@ -35,7 +35,7 @@ class LogMelSpectrogramLoss(nn.Module):
             sample_rate=16000,
             n_fft=1024,
             hop_length=256,
-            n_mels=80
+            n_mels=128
             ):
         super().__init__()
         self.to_mel = torchaudio.transforms.MelSpectrogram(
