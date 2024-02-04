@@ -9,7 +9,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from module.dataset import WaveFileDirectory
-from module.loss import MultiScaleSTFTLoss, LogMelSpectrogramLoss
+from module.loss import MultiScaleSTFTLoss
 from module.pitch_estimator import PitchEstimator
 from module.content_encoder import ContentEncoder
 from module.decoder import Decoder
@@ -34,13 +34,11 @@ parser.add_argument('-fp16', default=False, type=bool)
 parser.add_argument('--disc-interval', default=1, type=int)
 
 parser.add_argument('--weight-stft', default=1.0, type=float)
-parser.add_argument('--weight-con', default=1.0, type=float)
 parser.add_argument('--weight-adv', default=1.0, type=float)
 
 args = parser.parse_args()
 
 WEIGHT_STFT = args.weight_stft
-WEIGHT_CON = args.weight_con
 WEIGHT_ADV = args.weight_adv
 
 def load_or_init_models(device=torch.device('cpu')):
@@ -98,10 +96,9 @@ for epoch in range(args.epoch):
             wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
 
             z = CE.encode(wave)
-            z_prematch = match_features(z, z).detach() # self matching
             p = PE.estimate(wave)
             e = energy(wave)
-            fake = Dec.synthesize(z_prematch, p, e)
+            fake = Dec.synthesize(z, p, e)
 
             # remove nan
             fake[fake.isnan()] = 0
@@ -113,8 +110,7 @@ for epoch in range(args.epoch):
                 loss_adv += (logit ** 2).mean() / len(logits)
 
             loss_stft = stft_loss(fake, wave)
-            loss_con = (z.detach() - CE.encode(fake)).abs().mean()
-            loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT + loss_con * WEIGHT_CON
+            loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
@@ -141,7 +137,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f}, Con.: {loss_con.item():.4f}")
+        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f}")
 
         bar.update(N)
 

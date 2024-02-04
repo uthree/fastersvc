@@ -106,8 +106,7 @@ class Convertor(nn.Module):
         # calculate next phase buffer
         new_phase_buffer = phase_out[:, :, -1].unsqueeze(2)
         
-        # convert style and synthesize new voice
-        z = match_features(z, tgt, k, alpha)
+        # synthesize new voice
         y = self.decoder(z, p, e, src)
 
         # return new voice and shift left
