@@ -98,6 +98,7 @@ for epoch in range(args.epoch):
             z = CE.encode(wave)
             p = PE.estimate(wave)
             e = energy(wave)
+            z = match_features(z, z).detach()
             fake = Dec.synthesize(z, p, e)
 
             # remove nan
