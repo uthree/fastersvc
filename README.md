@@ -45,7 +45,7 @@ python3 train_pe.py <dataset path>
 ```
 
 2. Train content encoder
-Distill HuBERT-base. According to the WavLM paper, the fourth layer contains speaker information, so it is distilled. (Speaker classification can be performed using linear transformation from the features in the fourth layer.)
+Distill HuBERT-base. According to the WavLM paper, the 4th, 9th layer contains speaker information and phoneme infomation, so it is distilled. (Speaker classification can be performed using linear transformation from the features in the fourth layer.)
 ```sh
 python3 train_ce.py <dataset path>
 ```

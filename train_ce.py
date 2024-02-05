@@ -71,7 +71,7 @@ for epoch in range(args.epoch):
         with torch.cuda.amp.autocast(enabled=args.fp16):
             with torch.no_grad():
                 h = hubert(wave, output_hidden_states=True).hidden_states
-                hubert_features = h[4] # based https://arxiv.org/pdf/2110.13900.pdf Fig. 2
+                hubert_features = (h[4] + h[9]) * 0.5 # based https://arxiv.org/pdf/2110.13900.pdf Fig. 2
                 hubert_features = hubert_features.transpose(1, 2)
 
         Opt.zero_grad()
