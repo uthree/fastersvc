@@ -35,11 +35,13 @@ parser.add_argument('--disc-interval', default=1, type=int)
 
 parser.add_argument('--weight-stft', default=1.0, type=float)
 parser.add_argument('--weight-adv', default=1.0, type=float)
+parser.add_argument('--weight-feat', default=1.0, type=float)
 
 args = parser.parse_args()
 
 WEIGHT_STFT = args.weight_stft
 WEIGHT_ADV = args.weight_adv
+WEIGHT_FEAT = args.weight_feat
 
 def load_or_init_models(device=torch.device('cpu')):
     dec = Decoder().to(device)
@@ -56,6 +58,12 @@ def save_models(dec, dis):
     torch.save(dec.state_dict(), args.decoder_path)
     torch.save(dis.state_dict(), args.discriminator_path)
     print("Complete!")
+
+
+def center(wave, length=16000):
+    c = wave.shape[1] // 2
+    half_len = length // 2
+    return wave[:, c-half_len:c+half_len]
 
 
 device = torch.device(args.device)
@@ -105,13 +113,16 @@ for epoch in range(args.epoch):
             fake[fake.isnan()] = 0
 
             loss_adv = 0
-            logits = Dis.logits(fake)
-            for logit in logits:
+            loss_feat = 0
+            logits, feat_fake = Dis(center(fake))
+            _, feat_real = Dis(center(wave))
+            for logit, f_f, f_r in zip(logits, feat_fake, feat_real):
                 logit[logit.isnan()] = 0
                 loss_adv += (logit ** 2).mean() / len(logits)
+                loss_feat += (f_f - f_r).abs().mean() / len(feat_real)
 
             loss_stft = stft_loss(fake, wave)
-            loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT
+            loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT + loss_feat * WEIGHT_FEAT
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
@@ -122,11 +133,11 @@ for epoch in range(args.epoch):
             OptDis.zero_grad()
             with torch.cuda.amp.autocast(enabled=args.fp16):
                 loss_d = 0
-                logits = Dis.logits(wave)
+                logits, _ = Dis(center(wave))
                 for logit in logits:
                     logit[logit.isnan()] = 0
                     loss_d += (logit ** 2).mean() / len(logits)
-                logits = Dis.logits(fake)
+                logits, _ = Dis(center(fake))
                 for logit in logits:
                     logit[logit.isnan()] = 1
                     loss_d += ((logit - 1) ** 2).mean() / len(logits)
@@ -138,7 +149,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f}")
+        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f}, Feat.: {loss_feat.item():.4f}")
 
         bar.update(N)
 
