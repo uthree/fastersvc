@@ -91,7 +91,7 @@ class Convertor(nn.Module):
         p = 440 * 2 ** (scale / 12)
 
         # oscillate harmonics and noise
-        noises = torch.rand(N, 1, waveform_length, device=device)
+        noises = torch.randn(N, 1, waveform_length, device=device)
         sines, phase_out = oscillate_harmonics(
                 p,
                 phase_buffer,

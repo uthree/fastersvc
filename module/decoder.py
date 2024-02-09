@@ -210,7 +210,7 @@ class Decoder(nn.Module):
         device = p.device
 
         # generate noise
-        noises = torch.rand(N, 1, L, device=device)
+        noises = torch.randn(N, 1, L, device=device)
 
         # generate harmonics
         sines, _ = oscillate_harmonics(p, 0, self.frame_size, self.sample_rate, self.num_harmonics)
