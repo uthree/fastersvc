@@ -108,11 +108,14 @@ class DCC(nn.Module):
                  output_channels,
                  kernel_size,
                  dilation=1,
-                 groups=1
+                 groups=1,
+                 weight_norm=False
                  ):
         super().__init__()
         self.conv = nn.Conv1d(input_channels, output_channels, kernel_size, dilation=dilation, groups=groups)
         self.pad_size = (kernel_size - 1) * dilation
+        if weight_norm:
+            self.conv = nn.utils.weight_norm(self.conv)
 
     def forward(self, x):
         x = F.pad(x, [self.pad_size, 0], mode='replicate')

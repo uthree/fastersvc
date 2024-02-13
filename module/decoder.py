@@ -57,9 +57,9 @@ class Downsample(nn.Module):
 
         self.down = nn.AvgPool1d(factor*2, factor)
         self.down_res = nn.Conv1d(input_channels, output_channels, 1)
-        self.c1 = DCC(input_channels, input_channels, 5, 1)
-        self.c2 = DCC(input_channels, input_channels, 5, 2)
-        self.c3 = DCC(input_channels, output_channels, 5, 4)
+        self.c1 = DCC(input_channels, input_channels, 3, 1)
+        self.c2 = DCC(input_channels, input_channels, 3, 2)
+        self.c3 = DCC(input_channels, output_channels, 3, 4)
 
     def forward(self, x):
         x = F.pad(x, (self.pad_l, self.pad_r), mode='replicate')
@@ -75,14 +75,14 @@ class Downsample(nn.Module):
 
 
 class ResidualUnit1(nn.Module):
-    def __init__(self, channels, kernel_size=5, dilations=[1, 3, 9], negative_slope=0.1):
+    def __init__(self, channels, kernel_size=3, dilations=[1, 3, 9], negative_slope=0.1):
         super().__init__()
         self.negative_slope = negative_slope
         self.convs1 = nn.ModuleList([])
         self.convs2 = nn.ModuleList([])
         for d in dilations:
-            self.convs1.append(DCC(channels, channels, kernel_size, d))
-            self.convs2.append(DCC(channels, channels, kernel_size, d))
+            self.convs1.append(DCC(channels, channels, kernel_size, d, weight_norm=True))
+            self.convs2.append(DCC(channels, channels, kernel_size, 1, weight_norm=True))
 
     def forward(self, x):
         for c1, c2 in zip(self.convs1, self.convs2):
@@ -103,7 +103,7 @@ class Upsample(nn.Module):
                  factor=4,
                  negative_slope=0.1,
                  dilations=[[1, 3, 9]],
-                 kernel_sizes=[5],
+                 kernel_sizes=[3],
                  residual_unit_type='1'
                  ):
         super().__init__()
@@ -116,7 +116,7 @@ class Upsample(nn.Module):
         self.res_units = nn.ModuleList([])
         for ds, k in zip(dilations, kernel_sizes):
             self.res_units.append(unit_constructor(input_channels, k, ds))
-        self.output_layer = DCC(input_channels, output_channels, 3, 1)
+        self.output_layer = DCC(input_channels, output_channels, 3, 1, weight_norm=True)
 
     def forward(self, x, c):
         x = self.film(x, c)
@@ -132,7 +132,7 @@ class Upsample(nn.Module):
 
 
 class MidBlock(nn.Module):
-    def __init__(self, channels, cond_channels, dilations=[[1, 3, 9]], kernel_sizes=[5], residual_unit_type='1'):
+    def __init__(self, channels, cond_channels, dilations=[[1, 3, 9]], kernel_sizes=[3], residual_unit_type='1'):
         super().__init__()
         self.film = FiLM(channels, cond_channels)
         self.res_units = nn.ModuleList([])
@@ -141,7 +141,7 @@ class MidBlock(nn.Module):
         for k, ds in zip(kernel_sizes, dilations):
             self.res_units.append(
                     unit_constructor(channels, k, ds))
-        self.output_layer = DCC(channels, channels, 3, 1)
+        self.output_layer = DCC(channels, channels, 3, 1, weight_norm=True)
 
     def forward(self, x, c):
         x = self.film(x, c)
@@ -165,7 +165,7 @@ class Decoder(nn.Module):
                  sample_rate=16000,
                  frame_size=320,
                  dilations=[[1, 3, 9]],
-                 kernel_sizes=[5],
+                 kernel_sizes=[3],
                  residual_unit_type='1'
                  ):
         super().__init__()
