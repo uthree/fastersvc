@@ -42,7 +42,7 @@ class WaveFileDirectory(torch.utils.data.Dataset):
                     pad = torch.zeros(1, pad_len)
                     w = torch.cat([w, pad], dim=1)
                 self.data.append(w[0])
-         self.length = length
+        self.length = length
         print(f"Loaded total {len(self.data)} data.")
 
     def __getitem__(self, index):
