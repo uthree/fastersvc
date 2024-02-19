@@ -76,7 +76,8 @@ def oscillate_harmonics(f0,
                         sample_rate=16000,
                         num_harmonics=0,
                         begin_point=0,
-                        min_frequency=10.0):
+                        min_frequency=10.0,
+                        noise_scale=0.02):
     N = f0.shape[0]
     Nh = num_harmonics + 1
     Lf = f0.shape[2]
@@ -97,6 +98,9 @@ def oscillate_harmonics(f0,
     phi = (I + phase) % 1 # new phase
     theta = 2 * math.pi * phi # convert to radians
     harmonics = torch.sin(theta)
+
+    # add noise
+    harmonics += torch.randn_like(harmonics)
 
     return harmonics, phi
 

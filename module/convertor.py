@@ -8,7 +8,6 @@ from .content_encoder import ContentEncoder
 from .pitch_estimator import PitchEstimator
 from .decoder import Decoder
 from .common import energy, match_features, compute_f0, oscillate_harmonics
-from .adain import encode_style, apply_style
 
 
 # for realtime inferencing
@@ -33,11 +32,9 @@ class Convertor(nn.Module):
 
     # convert single waveform without buffering
     @torch.inference_mode()
-    def convert(self, wave, tgt, pitch_shift=0, k=4, alpha=0, adain=False, pitch_estimation_algorithm='default'):
+    def convert(self, wave, tgt, pitch_shift=0, k=4, alpha=0, pitch_estimation_algorithm='default'):
         z = self.content_encoder.encode(wave)
-        if adain:
-            style = encode_style(tgt)
-            z = apply_style(z, style)
+
         z = match_features(z, tgt, k, alpha)
         l = energy(wave)
         if pitch_estimation_algorithm != 'default':
@@ -91,17 +88,13 @@ class Convertor(nn.Module):
         p = 440 * 2 ** (scale / 12)
 
         # oscillate harmonics and noise
-        noises = torch.randn(N, 1, waveform_length, device=device)
-        sines, phase_out = oscillate_harmonics(
+        src, phase_out = oscillate_harmonics(
                 p,
                 phase_buffer,
                 self.frame_size,
                 self.sample_rate,
                 self.num_harmonics,
-                begin_point=buffer_size-1
-                )
-        # concatenate sines and noise
-        src = torch.cat([sines, noises], dim=1)
+                begin_point=buffer_size-1)
 
         # calculate next phase buffer
         new_phase_buffer = phase_out[:, :, -1].unsqueeze(2)

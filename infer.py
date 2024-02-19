@@ -24,7 +24,6 @@ parser.add_argument('--normalize', default=False, type=bool)
 parser.add_argument('-pe', '--pitch-estimation', default='default', choices=['default', 'dio', 'harvest'])
 parser.add_argument('-c', '--chunk', default=16000, type=int) # should be n * 320
 parser.add_argument('-nc', '--no-chunking', default=False, type=bool)
-parser.add_argument('-adain', default=False, type=bool)
 parser.add_argument('-b', '--buffer', default=1, type=int)
 
 args = parser.parse_args()
@@ -63,7 +62,7 @@ for i, path in enumerate(paths):
     wf = resample(wf, sr, 16000)
     wf = wf.mean(dim=0, keepdim=True)
     if args.no_chunking:
-        wf = convertor.convert(wf.to(device), tgt, args.pitch_shift, alpha=args.alpha, adain=args.adain,
+        wf = convertor.convert(wf.to(device), tgt, args.pitch_shift, alpha=args.alpha,
                                pitch_estimation_algorithm=args.pitch_estimation)
         wf = wf.cpu()
     else:
