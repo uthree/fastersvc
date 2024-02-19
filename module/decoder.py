@@ -80,7 +80,7 @@ class Upsample(nn.Module):
         self.negative_slope = negative_slope
         
         self.film = FiLM(input_channels, cond_channels)
-        self.up = nn.Upsample(scale_factor=factor)
+        self.up = nn.Upsample(scale_factor=factor, mode='linear')
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 3)
         self.c3 = DCC(input_channels, input_channels, 3, 9)
