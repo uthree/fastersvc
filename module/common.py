@@ -100,7 +100,7 @@ def oscillate_harmonics(f0,
     harmonics = torch.sin(theta)
 
     # add noise
-    harmonics += torch.randn_like(harmonics)
+    harmonics += torch.randn_like(harmonics) * noise_scale
 
     return harmonics, phi
 
