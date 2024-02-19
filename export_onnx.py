@@ -57,7 +57,7 @@ frames_per_second = convertor.decoder.sample_rate // convertor.decoder.frame_siz
 z = torch.randn(1, content_channels, frames_per_second) # content
 p = torch.randn(1, 1, frames_per_second) # pitch
 e = torch.randn(1, 1, frames_per_second) # energy
-src = torch.randn(1, 2, convertor.decoder.sample_rate) # source signal (0: sinewave, 1: noise)
+src = torch.randn(1, 1, convertor.decoder.sample_rate) # source signal
 torch.onnx.export(
         convertor.decoder,
         (z, p, e, src),
