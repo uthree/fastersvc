@@ -77,7 +77,7 @@ def oscillate_harmonics(f0,
                         num_harmonics=0,
                         begin_point=0,
                         min_frequency=10.0,
-                        noise_scale=0.05):
+                        noise_scale=0.33):
     N = f0.shape[0]
     Nh = num_harmonics + 1
     Lf = f0.shape[2]

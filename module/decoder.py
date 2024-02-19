@@ -65,12 +65,12 @@ class Downsample(nn.Module):
 
 
 class Upsample(nn.Module):
-    def __init__(self, input_channels, output_channels, cond_channels,factor=4, negative_slope=0.1):
+    def __init__(self, input_channels, output_channels, cond_channels, factor=4, negative_slope=0.1):
         super().__init__()
         self.negative_slope = negative_slope
+        self.factor = factor
         
         self.film = FiLM(input_channels, cond_channels)
-        self.up = nn.Upsample(scale_factor=factor, mode='linear')
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 3)
         self.c3 = DCC(input_channels, input_channels, 3, 9)
@@ -79,7 +79,7 @@ class Upsample(nn.Module):
 
     def forward(self, x, c):
         x = self.film(x, c)
-        x = self.up(x)
+        x = F.interpolate(x, scale_factor=self.factor, mode='linear')
         res = x
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
