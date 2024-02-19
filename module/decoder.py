@@ -45,25 +45,15 @@ class Downsample(nn.Module):
     def __init__(self, input_channels, output_channels, factor=4, negative_slope=0.1):
         super().__init__()
         self.negative_slope = negative_slope
+        self.factor = factor
 
-        if factor % 2 == 0:
-            pad_l = factor // 2
-            pad_r = factor // 2
-        else:
-            pad_l = factor // 2 + 1
-            pad_r = factor // 2
-        self.pad_l = pad_l
-        self.pad_r = pad_r
-
-        self.down = nn.AvgPool1d(factor*2, factor)
         self.down_res = nn.Conv1d(input_channels, output_channels, 1)
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 2)
         self.c3 = DCC(input_channels, output_channels, 3, 4)
 
     def forward(self, x):
-        x = F.pad(x, (self.pad_l, self.pad_r), mode='replicate')
-        x = self.down(x)
+        x = F.interpolate(x, scale_factor=1/self.factor, mode='linear')
         res = self.down_res(x)
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
