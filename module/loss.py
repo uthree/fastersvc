@@ -11,10 +11,10 @@ def safe_log(x):
 class LogMelSpectrogramLoss(nn.Module):
     def __init__(
             self,
-            sample_rate=48000,
-            n_fft=1024,
-            hop_length=256,
-            n_mels=80
+            sample_rate=24000,
+            n_fft=2048,
+            hop_length=512,
+            n_mels=128
             ):
         super().__init__()
         self.to_mel = torchaudio.transforms.MelSpectrogram(
