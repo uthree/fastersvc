@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(description="preprocess")
 
 parser.add_argument('input')
 parser.add_argument('-o', '--output', default='dataset_cache')
-parser.add_argument('-len', '--length', default=24000, type=int)
+parser.add_argument('-len', '--length', default=48000, type=int)
 parser.add_argument('--num-speakers', default=8192, type=int)
 parser.add_argument('-m', '--max-files', default=-1, type=int)
 parser.add_argument('-d', '--device', default='cuda')
@@ -75,7 +75,7 @@ for path in tqdm(dataset_files):
 
         # save
         output_path = output_parent / f"{counter}.pt"
-        torch.save((chunk[0], f0[0], hubert_features[0], spk_id), output_path)
+        torch.save((chunk[0].detach().cpu(), f0[0].detach().cpu(), hubert_features[0].detach().cpu(), spk_id), output_path)
         counter += 1
 
 # output speaker details
