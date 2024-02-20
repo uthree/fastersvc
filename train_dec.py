@@ -70,9 +70,9 @@ def center(wave, length=16000):
 
 device = torch.device(args.device)
 
-Dec, Dis, SE = load_or_init_models(device)
-CE = ContentEncoder().to(device).eval()
+CE = ContentEncoder().to(device)
 CE.load_state_dict(torch.load(args.content_encoder_path, map_location=device))
+Dec, Dis, SE = load_or_init_models(device)
 
 ds = Dataset(args.dataset_cache)
 dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
