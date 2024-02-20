@@ -8,28 +8,27 @@ import torch.optim as optim
 
 from tqdm import tqdm
 
-from module.dataset import WaveFileDirectory
+from module.dataset import Dataset
 from module.loss import LogMelSpectrogramLoss
 from module.pitch_estimator import PitchEstimator
 from module.content_encoder import ContentEncoder
 from module.decoder import Decoder
-from module.common import energy, match_features
+from module.common import energy
+from module.speaker_embedding import SpeakerEmbedding
 from module.discriminator import Discriminator
 
 
 parser = argparse.ArgumentParser(description="train voice conversion model")
 
-parser.add_argument('dataset')
+parser.add_argument('-dataset-cache', default='./dataset_cache')
 parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
-parser.add_argument('-pep', '--pitch-estimator-path', default='models/pitch_estimator.pt')
 parser.add_argument('-dip', '--discriminator-path', default='models/discriminator.pt')
+parser.add_argument('-sep', '--speaker-embedding-path', default='models/speaker_embedding.pt')
 parser.add_argument('-dep', '--decoder-path', default='models/decoder.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
 parser.add_argument('-e', '--epoch', default=60, type=int)
 parser.add_argument('-b', '--batch-size', default=16, type=int)
-parser.add_argument('-len', '--length', default=32000, type=int)
-parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
 parser.add_argument('--weight-adv', default=1.0, type=float)
@@ -45,17 +44,21 @@ WEIGHT_MEL = args.weight_mel
 def load_or_init_models(device=torch.device('cpu')):
     dec = Decoder().to(device)
     dis = Discriminator().to(device)
+    se = SpeakerEmbedding().to(device)
     if os.path.exists(args.decoder_path):
         dec.load_state_dict(torch.load(args.decoder_path, map_location=device))
     if os.path.exists(args.discriminator_path):
         dis.load_state_dict(torch.load(args.discriminator_path, map_location=device))
-    return dec, dis
+    if os.path.exists(args.speaker_embedding_path):
+        se.load_state_dict(torch.load(args.speaker_embedding_path, map_location=device))
+    return dec, dis, se
 
 
-def save_models(dec, dis):
+def save_models(dec, dis, se):
     print("Saving models...")
     torch.save(dec.state_dict(), args.decoder_path)
     torch.save(dis.state_dict(), args.discriminator_path)
+    torch.save(se.state_dict(), args.speaker_embedding_path)
     print("Complete!")
 
 
@@ -67,18 +70,11 @@ def center(wave, length=16000):
 
 device = torch.device(args.device)
 
-Dec, Dis = load_or_init_models(device)
-PE = PitchEstimator().to(device).eval()
-PE.load_state_dict(torch.load(args.pitch_estimator_path, map_location=device))
+Dec, Dis, SE = load_or_init_models(device)
 CE = ContentEncoder().to(device).eval()
 CE.load_state_dict(torch.load(args.content_encoder_path, map_location=device))
 
-ds = WaveFileDirectory(
-        [args.dataset],
-        length=args.length,
-        max_files=args.max_data
-        )
-
+ds = Dataset(args.dataset_cache)
 dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
@@ -94,19 +90,20 @@ step_count = 0
 for epoch in range(args.epoch):
     tqdm.write(f"Epoch #{epoch}")
     bar = tqdm(total=len(ds))
-    for batch, wave in enumerate(dl):
+    for batch, (wave, f0, hubert_features, spk_id) in enumerate(dl):
         N = wave.shape[0]
-        
+        wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
+        f0 = f0.to(device)
+        spk_id = spk_id.to(device)
+
         # train generator and speaker encoder
         OptDec.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
-            wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
 
             z = CE.encode(wave)
-            p = PE.estimate(wave)
             e = energy(wave)
-            z = match_features(z, z).detach()
-            fake = Dec.synthesize(z, p, e)
+            spk = SE(spk_id)
+            fake = Dec.synthesize(z, f0, e, spk)
 
             # remove nan
             fake[fake.isnan()] = 0
@@ -153,7 +150,7 @@ for epoch in range(args.epoch):
         bar.update(N)
 
         if batch % 500 == 0:
-            save_models(Dec, Dis)
+            save_models(Dec, Dis, SE)
 
 print("Training Complete!")
-save_models(Dec, Dis)
+save_models(Dec, Dis, SE)

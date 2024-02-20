@@ -23,57 +23,27 @@ def spectrogram(wave, n_fft, hop_size):
 # wave: [BatchSize, 1, Length]
 # Output: [BatchSize, 1, Frames]
 def energy(wave,
-           frame_size=320):
+           frame_size=480):
     return F.max_pool1d((wave ** 2).unsqueeze(1), frame_size)
-
-
-# Convert style based kNN.
-# Warning: this method is not optimized.
-# Do not give long sequence. computing complexy is quadratic.
-# 
-# source: [BatchSize, Channels, Length]
-# reference: [BatchSize, Channels, Length]
-# k: int
-# alpha: float (0.0 ~ 1.0)
-# metrics: one of ['IP', 'L2', 'cos'], 'IP' means innner product, 'L2' means euclid distance, 'cos' means cosine similarity
-# Output: [BatchSize, Channels, Length]
-def match_features(source, reference, k=4, alpha=0.0, metrics='cos'):
-    input_data = source
-
-    source = source.transpose(1, 2)
-    reference = reference.transpose(1, 2)
-    if metrics == 'IP':
-        sims = torch.bmm(source, reference.transpose(1, 2))
-    elif metrics == 'L2':
-        sims = -torch.cdist(source, reference)
-    elif metrics == 'cos':
-        reference_norm = torch.norm(reference, dim=2, keepdim=True) + 1e-6
-        source_norm = torch.norm(source, dim=2, keepdim=True) + 1e-6
-        sims = torch.bmm(source / source_norm, (reference / reference_norm).transpose(1, 2))
-    best = torch.topk(sims, k, dim=2)
-
-    result = torch.stack([reference[n][best.indices[n]] for n in range(source.shape[0])], dim=0).mean(dim=2)
-    result = result.transpose(1, 2)
-    return result * (1-alpha) + input_data * alpha
 
 
 # Oscillate harmonic signal for realtime inferencing
 #
 # Inputs ---
 # f0: [BatchSize, 1, Frames]
-# phase: scaler or [BatchSize, NumHarmonics, 1]
+# phase: scaler or [BatchSize, NumHarmonics + 1, 1]
 #
 # Outputs ---
 # (signals, phase)
-# signals: [BatchSize, NumHarmonics, Length]
-# phase: [BatchSize, NumHarmonics Length]
+# signals: [BatchSize, NumHarmonics + 1, Length]
+# phase: [BatchSize, NumHarmonics + 1, Length]
 #
 # phase's range is 0 to 1, multiply 2 * pi if you need radians
 # length = Frames * frame_size
 def oscillate_harmonics(f0,
                         phase=0,
-                        frame_size=320,
-                        sample_rate=16000,
+                        frame_size=480,
+                        sample_rate=24000,
                         num_harmonics=0,
                         begin_point=0,
                         min_frequency=10.0,
@@ -127,7 +97,7 @@ class DCC(nn.Module):
         return x
 
 
-class ChannelNorm(nn.Module):
+class LayerNorm(nn.Module):
     def __init__(self, channels, eps=1e-4):
         super().__init__()
         self.scale = nn.Parameter(torch.ones(1, channels, 1))
@@ -135,8 +105,8 @@ class ChannelNorm(nn.Module):
         self.eps = eps
 
     def forward(self, x):
-        mu = x.mean(dim=1, keepdim=True)
-        sigma = x.std(dim=1, keepdim=True) + self.eps
+        mu = x.mean(dim=(1, 2), keepdim=True)
+        sigma = x.std(dim=(1, 2), keepdim=True) + self.eps
         x = (x - mu) / sigma
         x = x * self.scale + self.shift
         return x
@@ -146,7 +116,7 @@ class ResBlock(nn.Module):
     def __init__(self, channels, kernel_size=7, dilation=1, mlp_mul=1, norm=False, negative_slope=0.1):
         super().__init__()
         self.c1 = DCC(channels, channels, kernel_size, dilation, channels)
-        self.norm = ChannelNorm(channels) if norm else nn.Identity()
+        self.norm = LayerNorm(channels) if norm else nn.Identity()
         self.c2 = nn.Conv1d(channels, channels * mlp_mul, 1)
         self.c3 = nn.Conv1d(channels * mlp_mul, channels, 1)
         self.negative_slope = negative_slope
@@ -181,7 +151,7 @@ def compute_f0_dio(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=20
         return pitchs
 
 
-def compute_f0_harvest(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=20000):
+def compute_f0_harvest(wf, sample_rate=24000, segment_size=480, f0_min=20, f0_max=20000):
     if wf.ndim == 1:
         device = wf.device
         signal = wf.detach().cpu().numpy()
@@ -200,7 +170,7 @@ def compute_f0_harvest(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_ma
         return pitchs
 
 
-def compute_f0(wf, sample_rate=16000, segment_size=320, algorithm='harvest'):
+def compute_f0(wf, sample_rate=24000, segment_size=480, algorithm='harvest'):
     l = wf.shape[1]
     wf = resample(wf, sample_rate, 16000)
     if algorithm == 'harvest':

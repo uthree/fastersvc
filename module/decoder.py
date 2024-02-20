@@ -5,29 +5,6 @@ import torch.nn.functional as F
 from .common import DCC, oscillate_harmonics
 
 
-class Pitch2Vec(nn.Module):
-    def __init__(self, cond_channels):
-        super().__init__()
-        self.c1 = nn.Conv1d(1, cond_channels, 1, 1, 0)
-        self.c2 = nn.Conv1d(cond_channels, cond_channels, 1, 1, 0)
-        torch.nn.init.normal_(self.c1.weight, mean=0.0, std=30.0)
-
-    def forward(self, x):
-        x = self.c1(x)
-        x = torch.sin(x)
-        x = self.c2(x)
-        return x
-
-
-class Energy2Vec(nn.Module):
-    def __init__(self, cond_channels):
-        super().__init__()
-        self.c1 = nn.Conv1d(1, cond_channels, 1, 1, 0)
-
-    def forward(self, x):
-        return self.c1(x)
-
-
 class FiLM(nn.Module):
     def __init__(self, channels, cond_channels):
         super().__init__()
@@ -48,9 +25,9 @@ class Downsample(nn.Module):
         self.factor = factor
 
         self.down_res = nn.Conv1d(input_channels, output_channels, 1)
-        self.c1 = DCC(input_channels, input_channels, 3, 1)
-        self.c2 = DCC(input_channels, input_channels, 3, 2)
-        self.c3 = DCC(input_channels, output_channels, 3, 4)
+        self.c1 = DCC(input_channels, input_channels, 5, 1)
+        self.c2 = DCC(input_channels, input_channels, 5, 2)
+        self.c3 = DCC(input_channels, output_channels, 5, 4)
 
     def forward(self, x):
         x = F.interpolate(x, scale_factor=1/self.factor, mode='linear')
@@ -71,11 +48,11 @@ class Upsample(nn.Module):
         self.factor = factor
         
         self.film = FiLM(input_channels, cond_channels)
-        self.c1 = DCC(input_channels, input_channels, 3, 1)
-        self.c2 = DCC(input_channels, input_channels, 3, 3)
-        self.c3 = DCC(input_channels, input_channels, 3, 9)
-        self.c4 = DCC(input_channels, input_channels, 3, 27)
-        self.c5 = DCC(input_channels, output_channels, 3, 1)
+        self.c1 = DCC(input_channels, input_channels, 5, 1)
+        self.c2 = DCC(input_channels, input_channels, 5, 3)
+        self.c3 = DCC(input_channels, input_channels, 5, 9)
+        self.c4 = DCC(input_channels, input_channels, 5, 27)
+        self.c5 = DCC(input_channels, output_channels, 5, 1)
 
     def forward(self, x, c):
         x = self.film(x, c)
@@ -99,12 +76,13 @@ class Upsample(nn.Module):
 class Decoder(nn.Module):
     def __init__(self,
                  channels=[256, 128, 64, 32],
-                 factors=[4, 4, 4, 5],
+                 factors=[4, 4, 5, 6],
                  cond_channels=[256, 128, 64, 32],
                  num_harmonics=0, # F0 sinewave only
-                 content_channels=768,
-                 sample_rate=16000,
-                 frame_size=320,
+                 content_channels=256,
+                 spk_dim=256,
+                 sample_rate=24000,
+                 frame_size=480,
                  ):
         super().__init__()
         self.num_harmonics = num_harmonics
@@ -123,8 +101,9 @@ class Decoder(nn.Module):
 
         # initialize content input
         self.content_in = nn.Conv1d(content_channels, channels[0], 1)
-        self.p2v = Pitch2Vec(cond_channels[0])
-        self.e2v = Energy2Vec(cond_channels[0])
+        self.p2v = nn.Conv1d(1, cond_channels[0], 1)
+        self.e2v = nn.Conv1d(1, cond_channels[0], 1)
+        self.s2v = nn.Conv1d(spk_dim, cond_channels[0], 1)
         self.film_in = FiLM(channels[0], cond_channels[0])
 
         # initialize upsample layers
@@ -134,7 +113,7 @@ class Decoder(nn.Module):
         for u, u_n, c_n, f in zip(up, up_next, reversed(cond_next), factors):
             self.ups.append(Upsample(u, u_n, c_n, f))
         # output layer
-        self.output_layer = DCC(channels[-1], 1, 3, 1)
+        self.output_layer = DCC(channels[-1], 1, 5, 1)
 
     def generate_source(self, p):
         L = p.shape[2] * self.frame_size
@@ -145,7 +124,7 @@ class Decoder(nn.Module):
         source_signals, _ = oscillate_harmonics(p, 0, self.frame_size, self.sample_rate, self.num_harmonics)
         return source_signals
 
-    def forward(self, x, p, e, source_signals):
+    def forward(self, x, p, e, spk, source_signals):
         # downsamples
         skips = []
         sines = self.down_input(source_signals)
@@ -154,7 +133,7 @@ class Decoder(nn.Module):
             skips.append(sines)
         
         # mid block
-        c = self.e2v(e) + self.p2v(p)
+        c = self.e2v(e) + self.p2v(p) + self.s2v(spk)
         x = self.content_in(x)
         x = self.film_in(x, c)
 
@@ -166,7 +145,7 @@ class Decoder(nn.Module):
         x = x.squeeze(1)
         return x
 
-    def synthesize(self, x, p, e):
+    def synthesize(self, x, p, e, spk):
         source_signals = self.generate_source(p)
-        out = self.forward(x, p, e, source_signals)
+        out = self.forward(x, p, e, spk, source_signals)
         return out

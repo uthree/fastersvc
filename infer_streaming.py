@@ -14,22 +14,21 @@ from module.convertor import Convertor
 from module.common import energy, match_features, oscillate_harmonics
 
 
-FRAME_SIZE=320
-INTERNAL_SR=16000
+FRAME_SIZE=480
+INTERNAL_SR=24000
 
 parser = argparse.ArgumentParser(description="realtime inference")
 parser.add_argument('-i', '--input', default=0, type=int)
 parser.add_argument('-o', '--output', default=0, type=int)
 parser.add_argument('-l', '--loopback', default=-1, type=int)
 parser.add_argument('-p', '--pitch-shift', default=0, type=float)
-parser.add_argument('-a', '--alpha', default=0., type=float)
 parser.add_argument('-idx', '--index', default='NONE')
 parser.add_argument('-m', '--models', default='./models/')
-parser.add_argument('-t', '--target', default='NONE')
+parser.add_argument('-t', '--target', default=0, type=int)
 parser.add_argument('-c', '--chunk', default=1280, type=int)
 parser.add_argument('-b', '--buffer', default=4, type=int)
 parser.add_argument('-d', '--device', default='cpu')
-parser.add_argument('-sr', '--sample-rate', default=16000, type=int)
+parser.add_argument('-sr', '--sample-rate', default=24000, type=int)
 parser.add_argument('-ig', '--input-gain', default=0, type=float)
 parser.add_argument('-og', '--output-gain', default=0, type=float)
 
@@ -41,17 +40,7 @@ convertor = Convertor()
 convertor.load(args.models)
 convertor.to(device)
 
-if args.index == 'NONE':
-    print("Loading target...")
-    wf, sr = torchaudio.load(args.target)
-    wf = wf.to(device)
-    wf = resample(wf, sr, 16000)
-    wf = wf[:1]
-    print("Encoding...")
-    tgt = convertor.encode_target(wf)
-else:
-    print("Loading index...")
-    tgt = torch.load(args.index).to(device)
+spk = convertor.speaker_embedding(torch.LongTensor([args.target], device=device))
 
 audio = pyaudio.PyAudio()
 
@@ -93,7 +82,7 @@ while True:
     chunk, buffer = convertor.convert_rt(
             chunk,
             buffer,
-            tgt,
+            spk,
             args.pitch_shift, 
             alpha=args.alpha
             )

@@ -6,8 +6,9 @@ import torch.nn.functional as F
 
 from .content_encoder import ContentEncoder
 from .pitch_estimator import PitchEstimator
+from .speaker_embedding import SpeakerEmbedding
 from .decoder import Decoder
-from .common import energy, match_features, compute_f0, oscillate_harmonics
+from .common import energy, compute_f0, oscillate_harmonics
 
 
 # for realtime inferencing
@@ -16,6 +17,7 @@ class Convertor(nn.Module):
         super().__init__()
         self.content_encoder = ContentEncoder().eval()
         self.pitch_estimator = PitchEstimator().eval()
+        self.speaker_embedding = SpeakerEmbedding().eval()
         self.decoder = Decoder().eval()
         self.frame_size = self.decoder.frame_size
         self.num_harmonics = self.decoder.num_harmonics
@@ -24,6 +26,7 @@ class Convertor(nn.Module):
     def load(self, path='./models', device='cpu'):
         self.pitch_estimator.load_state_dict(torch.load(os.path.join(path, 'pitch_estimator.pt'), map_location=device))
         self.content_encoder.load_state_dict(torch.load(os.path.join(path, 'content_encoder.pt'), map_location=device))
+        self.speaker_embedding.load_state_dict(torch.load(os.path.join(path, 'speaker_embedding.pt'), map_location=device))
         self.decoder.load_state_dict(torch.load(os.path.join(path, 'decoder.pt'), map_location=device))
 
     def encode_target(self, wave, stride=4):
@@ -32,11 +35,10 @@ class Convertor(nn.Module):
 
     # convert single waveform without buffering
     @torch.inference_mode()
-    def convert(self, wave, tgt, pitch_shift=0, k=4, alpha=0, pitch_estimation_algorithm='default'):
+    def convert(self, wave, spk, pitch_shift=0, pitch_estimation_algorithm='default'):
         z = self.content_encoder.encode(wave)
 
-        z = match_features(z, tgt, k, alpha)
-        l = energy(wave)
+        e = energy(wave)
         if pitch_estimation_algorithm != 'default':
             p = compute_f0(wave, algorithm=pitch_estimation_algorithm)
         else:
@@ -44,7 +46,7 @@ class Convertor(nn.Module):
         scale = 12 * torch.log2(p / 440) - 9
         scale += pitch_shift
         p = 440 * 2 ** ((scale + 9) / 12)
-        return self.decoder.synthesize(z, p, l)
+        return self.decoder.synthesize(z, p, e, spk)
 
     # initialize buffer for realtime inferencing
     @torch.inference_mode()
@@ -55,7 +57,7 @@ class Convertor(nn.Module):
     
     # convert voice with buffer for realtime inferencing
     @torch.inference_mode()
-    def convert_rt(self, chunk, buffer, tgt, pitch_shift, k=4, alpha=0, pitch_estimation='default'):
+    def convert_rt(self, chunk, buffer, spk, pitch_shift, k=4, alpha=0, pitch_estimation='default'):
         N = chunk.shape[0]
         device = chunk.device
         k = int(k)
@@ -79,9 +81,6 @@ class Convertor(nn.Module):
             p = compute_f0(x, algorithm=pitch_estimation)
         e = energy(x, self.frame_size)
 
-        # convert style
-        z = match_features(z, tgt, k, alpha)
-
         # pitch shift
         scale = 12 * torch.log2(p / 440)
         scale += pitch_shift
@@ -100,7 +99,7 @@ class Convertor(nn.Module):
         new_phase_buffer = phase_out[:, :, -1].unsqueeze(2)
         
         # synthesize new voice
-        y = self.decoder(z, p, e, src)
+        y = self.decoder(z, p, e, spk, src)
 
         # return new voice and shift left
         left_shift = self.frame_size * 3

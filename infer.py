@@ -16,7 +16,7 @@ parser.add_argument('-i', '--inputs', default="./inputs/")
 parser.add_argument('-o', '--outputs', default="./outputs/")
 parser.add_argument('-m', '--models', default='./models/')
 parser.add_argument('-p', '--pitch-shift', default=0, type=float)
-parser.add_argument('-t', '--target', default='./target.wav')
+parser.add_argument('-t', '--target', default=0, type=int)
 parser.add_argument('-d', '--device', default='cpu')
 parser.add_argument('-a', '--alpha', default=0, type=float)
 parser.add_argument('-idx', '--index', default='NONE')
@@ -37,18 +37,7 @@ convertor.to(device)
 if not os.path.exists(args.outputs):
     os.mkdir(args.outputs)
 
-
-if args.index == 'NONE':
-    print("Loading target...")
-    wf, sr = torchaudio.load(args.target)
-    wf = wf.to(device)
-    wf = resample(wf, sr, 16000)
-    wf = wf[:1]
-    print("Encoding...")
-    tgt = convertor.encode_target(wf)
-else:
-    print("Loading index...")
-    tgt = torch.load(args.index).to(device)
+spk = convertor.speaker_embedding(torch.LongTensor([args.target], device=device))
 
 support_formats = ['wav', 'ogg', 'mp3']
 paths = []
@@ -59,10 +48,10 @@ buffer_size = args.buffer * args.chunk
 for i, path in enumerate(paths):
     print(f"Converting {path} ...")
     wf, sr = torchaudio.load(path)
-    wf = resample(wf, sr, 16000)
+    wf = resample(wf, sr, 24000)
     wf = wf.mean(dim=0, keepdim=True)
     if args.no_chunking:
-        wf = convertor.convert(wf.to(device), tgt, args.pitch_shift, alpha=args.alpha,
+        wf = convertor.convert(wf.to(device), spk, args.pitch_shift,
                                pitch_estimation_algorithm=args.pitch_estimation)
         wf = wf.cpu()
     else:
@@ -76,7 +65,7 @@ for i, path in enumerate(paths):
             converted_chunk, buffer = convertor.convert_rt(
                     chunk.to(device),
                     buffer,
-                    tgt,
+                    spk,
                     args.pitch_shift,
                     alpha=args.alpha,
                     pitch_estimation=args.pitch_estimation,
@@ -84,6 +73,5 @@ for i, path in enumerate(paths):
             results.append(converted_chunk.cpu())
         wf = torch.cat(results, dim=1)
         wf = wf[:, (left_shift):]
-    wf = resample(wf, 16000, sr)
     file_name = f"{os.path.splitext(os.path.basename(path))[0]}"
-    torchaudio.save(os.path.join(args.outputs, f"{file_name}.wav"), src=wf, sample_rate=sr)
+    torchaudio.save(os.path.join(args.outputs, f"{file_name}.wav"), src=wf, sample_rate=24000)
