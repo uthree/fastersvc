@@ -88,6 +88,8 @@ class DiscriminatorS(nn.Module):
     def forward(self, x):
         fmap = []
         x = x.unsqueeze(1)
+        x = self.pool(x)
+        fmap.append(x)
         for l in self.convs:
             x = l(x)
             x = leaky_relu(x)
