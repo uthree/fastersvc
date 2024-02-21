@@ -31,11 +31,11 @@ class Downsample(nn.Module):
     def forward(self, x):
         x = F.interpolate(x, scale_factor=1/self.factor, mode='linear')
         res = self.down_res(x)
-        x = F.elu(x)
+        x = F.leaky_relu(x, 0.1)
         x = self.c1(x)
-        x = F.elu(x)
+        x = F.leaky_relu(x, 0.1)
         x = self.c2(x)
-        x = F.elu(x)
+        x = F.leaky_relu(x, 0.1)
         x = self.c3(x)
         return x + res
 
@@ -59,17 +59,17 @@ class Upsample(nn.Module):
         c = F.interpolate(c, scale_factor=self.factor, mode='linear')
         res = x
         x = self.film1(x, c)
-        x = F.elu(x)
+        x = F.leaky_relu(x, 0.1)
         x = self.c1(x)
-        x = F.elu(x)
+        x = F.leaky_relu(x, 0.1)
         x = self.c2(x)
         x = x + res
         res = x
         x = self.film2(x, c)
-        x = F.elu(x)
+        x = F.leaky_relu(x, 0.1)
         x = self.c3(x)
         x = self.film3(x, c)
-        x = F.elu(x)
+        x = F.leaky_relu(x, 0.1)
         x = self.c4(x)
         x = x + res
         x = self.c5(x)

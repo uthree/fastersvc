@@ -80,8 +80,8 @@ dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 
-OptDec = optim.RAdam(Dec.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
-OptDis = optim.RAdam(Dis.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
+OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
+OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 
 logmel_loss = LogMelSpectrogramLoss().to(device)
 
@@ -93,7 +93,7 @@ for epoch in range(args.epoch):
     bar = tqdm(total=len(ds))
     for batch, (wave, f0, hubert_features, spk_id) in enumerate(dl):
         N = wave.shape[0]
-        wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
+        wave = wave.to(device) * torch.rand(N, 1, device=device)
         f0 = f0.to(device)
         spk_id = spk_id.to(device)
 
@@ -106,21 +106,18 @@ for epoch in range(args.epoch):
             spk = SE(spk_id)
             fake = Dec.synthesize(z, f0, e, spk)
 
-            # remove nan
-            fake[fake.isnan()] = 0
-
             loss_adv = 0
             loss_feat = 0
             logits, feats_fake = Dis(center(fake))
             _, feats_real = Dis(center(wave))
             for logit in logits:
-                logit[logit.isnan()] = 0
                 loss_adv += (logit ** 2).mean() / len(logits)
             for f, r in zip(feats_fake, feats_real):
                 loss_feat += (f - r).abs().mean() / len(feats_fake)
 
             loss_mel = logmel_loss(fake, wave)
-            loss_g = loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL
+            loss_norm = (fake.mean(dim=1) ** 2).mean()
+            loss_g = loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL + loss_norm
 
         scaler.scale(loss_g).backward()
         scaler.step(OptDec)
@@ -132,11 +129,9 @@ for epoch in range(args.epoch):
             loss_d = 0
             logits, _ = Dis(center(wave))
             for logit in logits:
-                logit[logit.isnan()] = 0
                 loss_d += (logit ** 2).mean() / len(logits)
             logits, _ = Dis(center(fake))
             for logit in logits:
-                logit[logit.isnan()] = 1
                 loss_d += ((logit - 1) ** 2).mean() / len(logits)
 
         scaler.scale(loss_d).backward()

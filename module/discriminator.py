@@ -3,10 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def leaky_relu(x):
-    return F.leaky_relu(x, 0.1)
-
-
 def get_padding(kernel_size, dilation=1):
     return int((kernel_size*dilation - dilation)/2)
 
@@ -43,7 +39,7 @@ class DiscriminatorP(nn.Module):
 
         for l in self.convs:
             x = l(x)
-            x = leaky_relu(x)
+            x = F.leaky_relu(x, 0.1)
             fmap.append(x)
         x = self.post(x)
         fmap.append(x)
@@ -92,7 +88,7 @@ class DiscriminatorS(nn.Module):
         fmap.append(x)
         for l in self.convs:
             x = l(x)
-            x = leaky_relu(x)
+            x = F.leaky_relu(x, 0.1)
             fmap.append(x)
         x = self.post(x)
         fmap.append(x)
@@ -103,8 +99,9 @@ class MultiScaleDiscriminator(nn.Module):
     def __init__(self, scales=[1, 2, 4]):
         super().__init__()
         self.sub_discs = nn.ModuleList([])
-        for s in scales:
-            self.sub_discs.append(DiscriminatorS(s))
+        for i, s in enumerate(scales):
+            use_spectral_norm = (i == 0)
+            self.sub_discs.append(DiscriminatorS(s, use_spectral_norm))
 
     def forward(self, x):
         feats = []

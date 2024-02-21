@@ -43,9 +43,9 @@ class Convertor(nn.Module):
             p = compute_f0(wave, algorithm=pitch_estimation_algorithm)
         else:
             p = self.pitch_estimator.estimate(wave)
-        scale = 12 * torch.log2(p / 440) - 9
+        scale = 12 * torch.log2(p / 440)
         scale += pitch_shift
-        p = 440 * 2 ** ((scale + 9) / 12)
+        p = 440 * 2 ** (scale / 12)
         return self.decoder.synthesize(z, p, e, spk)
 
     # initialize buffer for realtime inferencing
