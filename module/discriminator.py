@@ -46,11 +46,12 @@ class DiscriminatorP(nn.Module):
             x = leaky_relu(x)
             fmap.append(x)
         x = self.post(x)
+        fmap.append(x)
         return x, fmap
 
 
 class MultiPeriodicDiscriminator(nn.Module):
-    def __init__(self, periods=[2, 3, 5, 7, 11, 17, 23]):
+    def __init__(self, periods=[2, 3, 5, 7, 11]):
         super().__init__()
         self.sub_discs = nn.ModuleList([])
         for p in periods:
@@ -71,7 +72,6 @@ class DiscriminatorS(nn.Module):
         super().__init__()
         norm_f = nn.utils.weight_norm if use_spectral_norm == False else nn.utils.spectral_norm
         
-
         self.pool = nn.AvgPool1d(scale)
         convs = [
                 nn.Conv1d(1, 32, 15, 1, 7),
@@ -93,11 +93,12 @@ class DiscriminatorS(nn.Module):
             x = leaky_relu(x)
             fmap.append(x)
         x = self.post(x)
+        fmap.append(x)
         return x, fmap
 
 
 class MultiScaleDiscriminator(nn.Module):
-    def __init__(self, scales=[1, 2, 3]):
+    def __init__(self, scales=[1, 2, 4]):
         super().__init__()
         self.sub_discs = nn.ModuleList([])
         for s in scales:

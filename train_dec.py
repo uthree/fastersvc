@@ -29,6 +29,7 @@ parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
 parser.add_argument('-e', '--epoch', default=60, type=int)
 parser.add_argument('-b', '--batch-size', default=16, type=int)
+parser.add_argument('--save-interval', type=int, default=100)
 parser.add_argument('-fp16', default=False, type=bool)
 
 parser.add_argument('--weight-adv', default=1.0, type=float)
@@ -79,8 +80,8 @@ dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 
-OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
-OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
+OptDec = optim.RAdam(Dec.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
+OptDis = optim.RAdam(Dis.parameters(), lr=args.learning_rate, betas=(0.9, 0.99))
 
 logmel_loss = LogMelSpectrogramLoss().to(device)
 
@@ -149,7 +150,7 @@ for epoch in range(args.epoch):
 
         bar.update(N)
 
-        if batch % 500 == 0:
+        if batch % args.save_interval == 0:
             save_models(Dec, Dis, SE)
 
 print("Training Complete!")

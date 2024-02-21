@@ -99,7 +99,7 @@ class Convertor(nn.Module):
         new_phase_buffer = phase_out[:, :, -1].unsqueeze(2)
         
         # synthesize new voice
-        y = self.decoder(z, p, e, spk, src)
+        y = self.decoder(z, e, spk, src)
 
         # return new voice and shift left
         left_shift = self.frame_size * 3
