@@ -11,7 +11,7 @@ class ContentEncoder(nn.Module):
                  hop_size=480,
                  internal_channels=256,
                  kernel_size=5,
-                 dilations=[1, 3, 9, 1],
+                 dilations=[1, 3, 9, 1, 3, 9],
                  output_channels=256,
                  hubert_channels=256
                  ):

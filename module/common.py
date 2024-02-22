@@ -114,20 +114,19 @@ class LayerNorm(nn.Module):
 
 
 class ResBlock(nn.Module):
-    def __init__(self, channels, kernel_size=7, dilation=1, mlp_mul=1, norm=False, negative_slope=0.1):
+    def __init__(self, channels, kernel_size=7, dilation=1, mlp_mul=1, norm=False):
         super().__init__()
         self.c1 = DCC(channels, channels, kernel_size, dilation, channels)
         self.norm = LayerNorm(channels) if norm else nn.Identity()
         self.c2 = nn.Conv1d(channels, channels * mlp_mul, 1)
         self.c3 = nn.Conv1d(channels * mlp_mul, channels, 1)
-        self.negative_slope = negative_slope
 
     def forward(self, x):
         res = x
         x = self.c1(x)
         x = self.norm(x)
         x = self.c2(x)
-        x = F.leaky_relu(x, self.negative_slope)
+        x = F.gelu(x)
         x = self.c3(x)
         return x + res
 

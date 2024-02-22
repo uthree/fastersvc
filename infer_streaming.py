@@ -25,7 +25,7 @@ parser.add_argument('-p', '--pitch-shift', default=0, type=float)
 parser.add_argument('-idx', '--index', default='NONE')
 parser.add_argument('-m', '--models', default='./models/')
 parser.add_argument('-t', '--target', default=0, type=int)
-parser.add_argument('-c', '--chunk', default=1280, type=int)
+parser.add_argument('-c', '--chunk', default=1920, type=int)
 parser.add_argument('-b', '--buffer', default=4, type=int)
 parser.add_argument('-d', '--device', default='cpu')
 parser.add_argument('-sr', '--sample-rate', default=24000, type=int)
@@ -40,7 +40,7 @@ convertor = Convertor()
 convertor.load(args.models)
 convertor.to(device)
 
-spk = convertor.speaker_embedding(torch.LongTensor([args.target], device=device))
+spk = convertor.speaker_embedding(torch.LongTensor([args.target]).to(device))
 
 audio = pyaudio.PyAudio()
 
