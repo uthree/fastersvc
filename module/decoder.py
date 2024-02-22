@@ -92,6 +92,7 @@ class Decoder(nn.Module):
         self.sample_rate = sample_rate
         self.frame_size = frame_size
         self.content_channels = content_channels
+        self.spk_dim = spk_dim
 
         # initialize downsample layers
         self.down_input = nn.Conv1d(num_harmonics + 1, cond_channels[-1], 1)

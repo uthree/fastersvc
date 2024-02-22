@@ -4,12 +4,10 @@ import os
 import torch
 
 from module.convertor import Convertor
-from module.index import IndexForOnnx
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', '--outputs', default="./onnx/")
 parser.add_argument('-m', '--models', default="./models/")
-parser.add_argument('-idx', '--index', default='NONE')
 parser.add_argument('-opset', default=15, type=int)
 
 args = parser.parse_args()
@@ -51,38 +49,38 @@ torch.onnx.export(
         dynamic_axes={
             "input": {0: "batch_size", 2: "length"}})
 
-print("Exporting Decoder")
+print("Exporting decoder")
 content_channels = convertor.decoder.content_channels
 frames_per_second = convertor.decoder.sample_rate // convertor.decoder.frame_size
+spk_dim = convertor.decoder.spk_dim
+
 z = torch.randn(1, content_channels, frames_per_second) # content
-p = torch.randn(1, 1, frames_per_second) # pitch
 e = torch.randn(1, 1, frames_per_second) # energy
+spk = torch.randn(1, spk_dim, 1) # speaker embedding
 src = torch.randn(1, 1, convertor.decoder.sample_rate) # source signal
 torch.onnx.export(
         convertor.decoder,
-        (z, p, e, src),
+        (z, e, spk, src),
         os.path.join(args.outputs, "decoder.onnx"),
         opset_version=opset_version,
-        input_names=["content", "pitch", "energy",  "source"],
+        input_names=["content", "energy", "speaker", "source"],
         output_names=["output"],
         dynamic_axes={
             "content": {0: "batch_size", 2: "length"},
-            "pitch": {0: "batch_size", 2: "length"},
             "energy": {0: "batch_size", 2: "length"},
+            "speaker": {0: "batch_size"},
             "source": {0: "batch_size", 2: "length"}})
 
 
-if args.index != 'NONE':
-    print("Exporting Index")
-    vectors = torch.load(args.index)
-    index_matcher = IndexForOnnx(vectors)
-    z = torch.randn(1, content_channels, frames_per_second)
-    torch.onnx.export(
-            index_matcher,
-            (z,),
-            os.path.join(args.outputs, "index.onnx"),
-            opset_version=opset_version,
-            input_names=["input"],
-            output_names=["output"],
-            dynamic_axes={
-                "input": {0: "batch_size", 2: "length"}})
+
+print("Exporting speaker embedding")
+idx = torch.LongTensor([0])
+torch.onnx.export(
+        convertor.speaker_embedding,
+        idx,
+        os.path.join(args.outputs, "speaker_embedding.onnx"),
+        opset_version=opset_version,
+        input_names=["index"],
+        output_names=["output"],
+        dynamic_axes={
+            "index": {0: "batch_size"}})
