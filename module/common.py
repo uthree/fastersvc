@@ -61,7 +61,7 @@ def oscillate_harmonics(f0,
     fs = f0 * mul
 
     # change length to wave's
-    fs = F.interpolate(fs, Lw, mode='linear')
+    fs = F.interpolate(fs, Lw)
 
     # generate harmonics
     I = torch.cumsum(fs / sample_rate, dim=2) # numerical integration
