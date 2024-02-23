@@ -108,8 +108,10 @@ class PreNet(nn.Module):
         x = F.leaky_relu(x, 0.1)
         x = self.film2(x, c)
         out = self.output_layer(x)
+        amps = self.to_harmonic_amps(x)
         # positive only
-        amps = F.interpolate(self.to_harmonic_amps(x) ** 2, scale_factor=self.frame_size, mode='linear')
+        amps = torch.exp(amps).clamp_max(6.0)
+        amps = F.interpolate(amps, scale_factor=self.frame_size, mode='linear')
         return out, amps
 
 

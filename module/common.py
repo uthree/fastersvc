@@ -61,7 +61,7 @@ def oscillate_harmonics(f0,
     fs = f0 * mul
 
     # change length to wave's
-    fs = F.interpolate(fs, Lw)
+    fs = F.interpolate(fs, Lw, mode='linear')
 
     # generate harmonics
     I = torch.cumsum(fs / sample_rate, dim=2) # numerical integration
@@ -71,7 +71,7 @@ def oscillate_harmonics(f0,
     harmonics = torch.sin(theta)
 
     # unvoiced / voiced filter
-    uv = F.interpolate((f0 > min_frequency).to(torch.float), Lw)
+    uv = F.interpolate((f0 > min_frequency).to(torch.float), Lw, mode='linear')
     harmonics = harmonics * uv
 
     # add noise
