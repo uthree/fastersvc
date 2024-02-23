@@ -20,16 +20,25 @@ VRChatは、VR機器を用いて、ゲーム内のキャラクター(アバタ�
 
 ## 2. 提案手法
 ### 2.1. HuBERT-Softの蒸留
+SoftSVCは、HuBERT-Softを使って疑似的な音素情報を取得する。しかし、HuBERT-SoftはHuBERTに基づいているため、Self-Attention層を含む。そのため、系列長に対して二次関数的に計算量やメモリ使用量が増加する。また、双方向の注意が可能な構造となっているため、リアルタイムで低遅延に変換する際に使用するには不向きである。そのため、このモデルを未来の情報を産使用しない"Causal"な1次元CNNで蒸留したものを用いる。このリポジトリでは、Dilation Rateを変更したConvNeXtレイヤーのスタックを使用している。
+
 ### 2.2. 高速なピッチ推定器
-### 2.3. 倍音発振器 (Harmonic Oscillator)
-### 2.4. ソースフィルタモデルに基づくデコーダー
+ソースフィルタモデルに基づくニューラルボコーダーを学習する際、通常であればWORLDを用いて基音周波数(ピッチ)を推定するが、この処理は並列化されておらず、時間がかかるため、リアルタイム処理には不向きである。よって、本リポジトリではHuBERT-Softと同様に、Dilation Rateを変更したConvNeXtレイヤーのスタックでharvestによるピッチ推定を蒸留する。
+
+### 2.3. ソースフィルタモデルに基づくデコーダー
+ソースフィルタモデルは、基音周波数をもとに正弦波等の単純な信号を生成し(ソース)、それを1次元のU-Net等で加工するという方式の音声合成手法である。この手法を用いることで、安定したピッチ制御が可能になる。
+
+#### 2.3.1 倍音の制御が可能なソースモデル
+
+#### 2.3.2 軽量なフィルターモデル
 
 ## 参考文献
-- [WavLM](https://arxiv.org/abs/2110.13900)
-- [Hifi-GAN](https://arxiv.org/abs/2010.05646)
 - [VRChat 公式サイト](https://hello.vrchat.com/)
 - [VRChat Wikipedia](https://ja.wikipedia.org/wiki/VRChat)
 - [恋声](http://koigoemoe.g2.xrea.com/koigoe/koigoe.html)
 - [RVC Retrieval Based Voice Conversion](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI)
 - [VC Client](https://github.com/w-okada/voice-changer)
 - [MMVC Many-to-Many Voice Conversion](https://github.com/isletennos/MMVC_Trainer)
+- [kNN-VC](https://arxiv.org/abs/2305.18975)
+- [SoftVC](https://arxiv.org/abs/2111.02392)
+- [ConvNeXt](https://arxiv.org/abs/2201.03545)
