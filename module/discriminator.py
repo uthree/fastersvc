@@ -71,12 +71,12 @@ class DiscriminatorS(nn.Module):
         self.pool = nn.AvgPool1d(scale)
         convs = [
                 nn.Conv1d(1, 32, 15, 1, 7),
-                nn.Conv1d(32, 64, 41, 2, 20, groups=2),
-                nn.Conv1d(64, 128, 41, 2, 20, groups=4),
-                nn.Conv1d(128, 256, 41, 2, 20, groups=8),
-                nn.Conv1d(256, 256, 41, 2, 20, groups=8),
-                nn.Conv1d(256, 256, 41, 2, 20, groups=8),
-                nn.Conv1d(256, 256, 41, 2, 20, groups=8),
+                nn.Conv1d(32, 64, 41, 3, 20, groups=2),
+                nn.Conv1d(64, 128, 41, 3, 20, groups=4),
+                nn.Conv1d(128, 256, 41, 3, 20, groups=8),
+                nn.Conv1d(256, 256, 41, 3, 20, groups=8),
+                nn.Conv1d(256, 256, 41, 3, 20, groups=8),
+                nn.Conv1d(256, 256, 41, 3, 20, groups=8),
                 ]
         self.convs = nn.ModuleList([norm_f(c) for c in convs])
         self.post = norm_f(nn.Conv1d(256, 1, 3, 1, 1))

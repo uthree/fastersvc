@@ -70,6 +70,10 @@ def oscillate_harmonics(f0,
     theta = 2 * math.pi * phi # convert to radians
     harmonics = torch.sin(theta)
 
+    # unvoiced / voiced filter
+    uv = F.interpolate((f0 > min_frequency).to(torch.float), Lw)
+    harmonics = harmonics * uv
+
     # add noise
     harmonics = harmonics * harmonics_scale + torch.randn_like(harmonics) * noise_scale
 
