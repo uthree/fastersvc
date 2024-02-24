@@ -91,7 +91,7 @@ step_count = 0
 for epoch in range(args.epoch):
     tqdm.write(f"Epoch #{epoch}")
     bar = tqdm(total=len(ds))
-    for batch, (wave, f0, hubert_features, spk_id) in enumerate(dl):
+    for batch, (wave, f0, spk_id) in enumerate(dl):
         N = wave.shape[0]
         wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
         f0 = f0.to(device)
@@ -110,13 +110,14 @@ for epoch in range(args.epoch):
             loss_adv = 0
             loss_feat = 0
             logits, feats_fake = Dis(center(fake))
+            loss_mel = logmel_loss(fake, wave)
+
             _, feats_real = Dis(center(wave))
             for logit in logits:
                 loss_adv += (logit ** 2).mean() / len(logits)
             for f, r in zip(feats_fake, feats_real):
                 loss_feat += (f - r).abs().mean() / len(feats_fake)
 
-            loss_mel = logmel_loss(fake, wave)
             loss_norm = (fake.mean(dim=1) ** 2).mean()
             loss_g = loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL + loss_norm
 

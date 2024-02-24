@@ -57,7 +57,7 @@ step_count = 0
 for epoch in range(args.epoch):
     tqdm.write(f"Epoch #{epoch}")
     bar = tqdm(total=len(ds))
-    for batch, (wave, f0, hubert_features, spk_id) in enumerate(dl):
+    for batch, (wave, f0, spk_id) in enumerate(dl):
         N = wave.shape[0]
         wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
         back_voice = wave.roll(1, dims=0)

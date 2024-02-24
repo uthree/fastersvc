@@ -35,9 +35,6 @@ for e in support_exts:
 if args.max_files != -1:
     dataset_files = dataset_files[:args.max_files]
 
-hubert = torch.hub.load("bshall/hubert:main", "hubert_soft", trust_repo=True)
-hubert = hubert.to(device)
-
 # create output directory
 output_parent = Path(args.output)
 if not output_parent.exists():
@@ -63,9 +60,6 @@ for path in tqdm(dataset_files):
         # f0
         f0 = compute_f0(chunk)
 
-        # extract hubert features
-        hubert_input = resample(chunk, 24000, 16000).to(device).unsqueeze(1)
-        hubert_features = hubert.units(hubert_input).to(device).transpose(1, 2)
 
         # get spekaer id
         if parent_path not in parent_paths:
@@ -74,8 +68,10 @@ for path in tqdm(dataset_files):
         spk_id = min(spk_id, args.num_speakers)
 
         # save
-        output_path = output_parent / f"{counter}.pt"
-        torch.save((chunk[0].detach().cpu(), f0[0].detach().cpu(), hubert_features[0].detach().cpu(), spk_id), output_path)
+        output_pt_path = output_parent / f"{counter}.pt"
+        torch.save((f0[0].detach().cpu(), spk_id), output_pt_path)
+        output_wave_path = output_parent / f"{counter}.wav"
+        torchaudio.save(output_wave_path, src=chunk, sample_rate=24000)
         counter += 1
 
 # output speaker details

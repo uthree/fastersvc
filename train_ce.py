@@ -39,14 +39,14 @@ def save_models(ce):
 
 device = torch.device(args.device)
 
+hubert = torch.hub.load("bshall/hubert:main", "hubert_soft", trust_repo=True)
+hubert = hubert.to(device)
+
 CE = load_or_init_models(device)
-
 ds = Dataset(args.dataset_cache)
-
 dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
-
 Opt = optim.RAdam(CE.parameters(), lr=args.learning_rate)
 
 # Training
@@ -55,15 +55,16 @@ step_count = 0
 for epoch in range(args.epoch):
     tqdm.write(f"Epoch #{epoch}")
     bar = tqdm(total=len(ds))
-    for batch, (wave, f0, hubert_features, spk_id) in enumerate(dl):
+    for batch, (wave, f0, spk_id) in enumerate(dl):
         N = wave.shape[0]
         wave = wave.to(device)
-        hubert_features = hubert_features.to(device)
+
+        hubert_features = hubert.units(resample(wave.unsqueeze(1), 24000, 16000)).transpose(1, 2)
 
         with torch.cuda.amp.autocast(enabled=args.fp16):
             out = CE.encode(wave)
             pred_feat = CE.to_hubert(out)
-            loss = (hubert_features - pred_feat).abs().mean()
+            loss = (F.interpolate(hubert_features, pred_feat.shape[2]) - pred_feat).abs().mean()
 
         scaler.scale(loss).backward()
         scaler.step(Opt)
