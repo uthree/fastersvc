@@ -27,9 +27,9 @@ class Downsample(nn.Module):
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 2)
         self.c3 = DCC(input_channels, output_channels, 3, 4)
+        self.pool = nn.AvgPool1d(factor)
 
     def forward(self, x):
-        x = F.interpolate(x, scale_factor=1/self.factor, mode='linear')
         res = self.down_res(x)
         x = F.leaky_relu(x, 0.1)
         x = self.c1(x)
@@ -37,7 +37,9 @@ class Downsample(nn.Module):
         x = self.c2(x)
         x = F.leaky_relu(x, 0.1)
         x = self.c3(x)
-        return x + res
+        x = x + res
+        x = self.pool(x)
+        return x
 
 
 class Upsample(nn.Module):
@@ -47,7 +49,6 @@ class Upsample(nn.Module):
         
         self.film1 = FiLM(input_channels, cond_channels)
         self.film2 = FiLM(input_channels, cond_channels)
-        self.film3 = FiLM(input_channels, cond_channels)
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 3)
         self.c3 = DCC(input_channels, input_channels, 3, 9)
@@ -60,17 +61,16 @@ class Upsample(nn.Module):
         res = x
         x = F.leaky_relu(x, 0.1)
         x = self.c1(x)
-        x = self.film1(x, c)
         x = F.leaky_relu(x, 0.1)
         x = self.c2(x)
+        x = self.film1(x, c)
         x = x + res
         res = x
         x = F.leaky_relu(x, 0.1)
         x = self.c3(x)
-        x = self.film2(x, c)
         x = F.leaky_relu(x, 0.1)
         x = self.c4(x)
-        x = self.film3(x, c)
+        x = self.film2(x, c)
         x = x + res
         x = self.c5(x)
         return x

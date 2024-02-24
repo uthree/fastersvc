@@ -47,7 +47,7 @@ class DiscriminatorP(nn.Module):
 
 
 class MultiPeriodicDiscriminator(nn.Module):
-    def __init__(self, periods=[2, 3, 5, 7, 11, 17, 23, 37]):
+    def __init__(self, periods=[2, 3, 5, 7, 11]):
         super().__init__()
         self.sub_discs = nn.ModuleList([])
         for p in periods:
