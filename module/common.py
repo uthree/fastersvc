@@ -183,3 +183,39 @@ def compute_f0(wf, sample_rate=24000, segment_size=480, algorithm='harvest'):
         pitchs = compute_f0_dio(wf, 16000)
     return F.interpolate(pitchs, l // segment_size, mode='linear')
 
+
+# 1d instance normalization to remove speaker's infomation
+def instance_norm(x, eps=1e-6):
+    mean = x.mean(dim=2, keepdim=True)
+    std = x.std(dim=2, keepdim=True) + eps
+    return (x - mean) / std
+
+
+# incremental instance normalization to remove speaker's infomation on realtime inferensing
+def incremental_instance_norm(x, buffer=None, eps=1e-6, alpha=0.9):
+    # initialize buffer if buffer is None
+    if buffer is None:
+        C = x.shape[1]
+        device = x.device
+        mean = x.mean(dim=2, keepdim=True)
+        std = x.std(dim=2, keepdim=True)
+        buffer = (mean, std)
+    
+    # expand buffer
+    b_mean, b_std = buffer
+
+    # calculate mean, std
+    mean = x.mean(dim=2, keepdim=True)
+    std = x.std(dim=2, keepdim=True)
+
+    # normalize
+    x = (x - b_mean) / (F.relu(b_std) + eps)
+
+    # update buffer
+    b_mean = b_mean * alpha + mean * (1 - alpha)
+    b_std = b_std * alpha + std * (1 - alpha)
+
+    # pack buffer
+    buffer = (b_mean, b_std)
+    
+    return x, buffer

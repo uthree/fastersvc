@@ -13,7 +13,7 @@ class ContentEncoder(nn.Module):
                  kernel_size=5,
                  dilations=[1, 3, 9, 1, 3, 9],
                  output_channels=256,
-                 hubert_channels=256
+                 hubert_channels=256,
                  ):
         super().__init__()
         self.n_fft = n_fft

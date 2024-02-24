@@ -8,7 +8,7 @@ from .content_encoder import ContentEncoder
 from .pitch_estimator import PitchEstimator
 from .speaker_embedding import SpeakerEmbedding
 from .decoder import Decoder
-from .common import energy, compute_f0, oscillate_harmonics
+from .common import energy, compute_f0, oscillate_harmonics, instance_norm, incremental_instance_norm
 
 
 # for realtime inferencing
@@ -37,6 +37,7 @@ class Convertor(nn.Module):
     @torch.inference_mode()
     def convert(self, wave, spk, pitch_shift=0, pitch_estimation_algorithm='default'):
         z = self.content_encoder.encode(wave)
+        z = instance_norm(z)
 
         e = energy(wave)
         if pitch_estimation_algorithm != 'default':
@@ -53,7 +54,9 @@ class Convertor(nn.Module):
     def init_buffer(self, buffer_size, device='cpu'):
         audio_buffer = torch.zeros(1, buffer_size, device=device)
         phase_buffer = torch.zeros(1, self.num_harmonics + 1, 1, device=device)
-        return audio_buffer, phase_buffer
+        z_channels = self.content_encoder.output_channels
+        iin_buffer = None
+        return audio_buffer, phase_buffer, iin_buffer
     
     # convert voice with buffer for realtime inferencing
     @torch.inference_mode()
@@ -63,7 +66,7 @@ class Convertor(nn.Module):
         k = int(k)
 
         # extpand buffer variables
-        audio_buffer, phase_buffer = buffer
+        audio_buffer, phase_buffer, iin_buffer = buffer
 
         # buffer size and chunk size
         buffer_size = audio_buffer.shape[1]
@@ -75,6 +78,10 @@ class Convertor(nn.Module):
 
         # encode content, estimate energy, estimate pitch
         z = self.content_encoder.encode(x)
+        
+        # incremental instance normalization
+        z, iin_buffer = incremental_instance_norm(z, iin_buffer)
+
         if pitch_estimation == 'default':
             p = self.pitch_estimator.estimate(x)
         else:
@@ -106,4 +113,4 @@ class Convertor(nn.Module):
         audio_out = y[:, buffer_size-left_shift:-left_shift]
         new_audio_buffer = x[:, -buffer_size:]
 
-        return audio_out, (new_audio_buffer, new_phase_buffer)
+        return audio_out, (new_audio_buffer, new_phase_buffer, iin_buffer)

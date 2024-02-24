@@ -13,7 +13,7 @@ from module.loss import LogMelSpectrogramLoss
 from module.pitch_estimator import PitchEstimator
 from module.content_encoder import ContentEncoder
 from module.decoder import Decoder
-from module.common import energy
+from module.common import energy, instance_norm
 from module.speaker_embedding import SpeakerEmbedding
 from module.discriminator import Discriminator
 
@@ -102,6 +102,7 @@ for epoch in range(args.epoch):
         with torch.cuda.amp.autocast(enabled=args.fp16):
 
             z = CE.encode(wave)
+            z = instance_norm(z)
             e = energy(wave)
             spk = SE(spk_id)
             fake = Dec.synthesize(z, f0, e, spk)
