@@ -16,11 +16,11 @@ class DiscriminatorP(nn.Module):
         k = kernel_size
         s = stride
         convs = [
-                nn.Conv2d(1, 32, (k, 1), (s, 1), (get_padding(5, 1), 0)),
-                nn.Conv2d(32, 64, (k, 1), (s, 1), (get_padding(5, 1), 0), groups=2),
-                nn.Conv2d(64, 128, (k, 1), (s, 1), (get_padding(5, 1), 0), groups=4),
-                nn.Conv2d(128, 256, (k, 1), (s, 1), (get_padding(5, 1), 0), groups=8),
-                nn.Conv2d(256, 256, (k, 1), 1, (2, 0), groups=8),
+                nn.Conv2d(1, 16, (k, 1), (s, 1), (get_padding(5, 1), 0)),
+                nn.Conv2d(16, 32, (k, 1), (s, 1), (get_padding(5, 1), 0)),
+                nn.Conv2d(32, 64, (k, 1), (s, 1), (get_padding(5, 1), 0)),
+                nn.Conv2d(64, 128, (k, 1), (s, 1), (get_padding(5, 1), 0)),
+                nn.Conv2d(128, 256, (k, 1), 1, (2, 0), groups=8),
                 ]
         self.convs = nn.ModuleList([norm_f(c) for c in convs])
         self.post = norm_f(nn.Conv2d(256, 1, (3, 1), 1, (1, 0)))
@@ -47,7 +47,7 @@ class DiscriminatorP(nn.Module):
 
 
 class MultiPeriodicDiscriminator(nn.Module):
-    def __init__(self, periods=[2, 3, 5, 7, 11]):
+    def __init__(self, periods=[2, 3, 5, 7, 11, 17, 23, 37]):
         super().__init__()
         self.sub_discs = nn.ModuleList([])
         for p in periods:
@@ -71,12 +71,12 @@ class DiscriminatorS(nn.Module):
         self.pool = nn.AvgPool1d(scale)
         convs = [
                 nn.Conv1d(1, 32, 15, 1, 7),
-                nn.Conv1d(32, 64, 41, 3, 20, groups=2),
-                nn.Conv1d(64, 128, 41, 3, 20, groups=4),
-                nn.Conv1d(128, 256, 41, 3, 20, groups=8),
-                nn.Conv1d(256, 256, 41, 3, 20, groups=8),
-                nn.Conv1d(256, 256, 41, 3, 20, groups=8),
-                nn.Conv1d(256, 256, 41, 3, 20, groups=8),
+                nn.Conv1d(32, 64, 41, 2, 20, groups=2),
+                nn.Conv1d(64, 128, 41, 2, 20, groups=4),
+                nn.Conv1d(128, 256, 41, 2, 20, groups=8),
+                nn.Conv1d(256, 256, 41, 2, 20, groups=8),
+                nn.Conv1d(256, 256, 41, 2, 20, groups=8),
+                nn.Conv1d(256, 256, 41, 2, 20, groups=8),
                 ]
         self.convs = nn.ModuleList([norm_f(c) for c in convs])
         self.post = norm_f(nn.Conv1d(256, 1, 3, 1, 1))

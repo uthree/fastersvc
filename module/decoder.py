@@ -92,12 +92,12 @@ class PreNet(nn.Module):
         
         self.spk_in = nn.Conv1d(spk_dim, cond_channels, 1)
         self.energy_in = nn.Conv1d(1, cond_channels, 1)
-        self.c1 = DCC(content_channels, internal_channels, 3)
+        self.c1 = DCC(content_channels, internal_channels, 3, 1)
         self.film1 = FiLM(internal_channels, cond_channels)
-        self.c2 = DCC(internal_channels, internal_channels, 3)
+        self.c2 = DCC(internal_channels, internal_channels, 3, 3)
         self.film2 = FiLM(internal_channels, cond_channels)
-        self.output_layer = DCC(internal_channels, internal_channels, 3)
-        self.to_harmonic_amps = DCC(internal_channels, num_harmonics+1, 3)
+        self.output_layer = DCC(internal_channels, internal_channels, 3, 9)
+        self.to_harmonic_amps = DCC(internal_channels, num_harmonics+1, 3, 9)
 
     def forward(self, x, e, spk):
         c = self.energy_in(e) + self.spk_in(spk)
