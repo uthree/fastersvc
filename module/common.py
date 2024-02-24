@@ -192,7 +192,7 @@ def instance_norm(x, eps=1e-6):
 
 
 # incremental instance normalization to remove speaker's infomation on realtime inferensing
-def incremental_instance_norm(x, buffer=None, eps=1e-6, alpha=0.99):
+def incremental_instance_norm(x, buffer=None, eps=1e-6, alpha=0.95):
     # initialize buffer if buffer is None
     if buffer is None:
         C = x.shape[1]
