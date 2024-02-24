@@ -93,7 +93,9 @@ for epoch in range(args.epoch):
     bar = tqdm(total=len(ds))
     for batch, (wave, f0, spk_id) in enumerate(dl):
         N = wave.shape[0]
-        wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
+        wave = wave.to(device)
+        # Data argumentation
+        wave = wave / wave.abs().max(dim=1, keepdim=True).values * torch.rand(N, 1, device=device)
         f0 = f0.to(device)
         spk_id = spk_id.to(device)
 
