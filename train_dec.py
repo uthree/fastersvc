@@ -34,7 +34,7 @@ parser.add_argument('-fp16', default=False, type=bool)
 
 parser.add_argument('--weight-adv', default=1.0, type=float)
 parser.add_argument('--weight-feat', default=2.0, type=float)
-parser.add_argument('--weight-mel', default=1.0, type=float)
+parser.add_argument('--weight-mel', default=45.0, type=float)
 
 args = parser.parse_args()
 
@@ -120,7 +120,7 @@ for epoch in range(args.epoch):
             for f, r in zip(feats_fake, feats_real):
                 loss_feat += (f - r).abs().mean() / len(feats_fake)
 
-            loss_norm = (fake.mean(dim=1) ** 2).mean()
+            loss_norm = (F.avg_pool1d(fake.unsqueeze(1), 2400) ** 2).mean()
             loss_g = loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL + loss_norm
 
         scaler.scale(loss_g).backward()
