@@ -120,8 +120,7 @@ for epoch in range(args.epoch):
             for f, r in zip(feats_fake, feats_real):
                 loss_feat += (f - r).abs().mean() / len(feats_fake)
 
-            loss_norm = (F.avg_pool1d(fake.unsqueeze(1), 2400) ** 2).mean()
-            loss_g = loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL + loss_norm
+            loss_g = loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL
 
         scaler.scale(loss_g).backward()
         nn.utils.clip_grad_norm_(Dec.parameters(), 1.0)
