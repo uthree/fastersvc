@@ -124,6 +124,7 @@ for epoch in range(args.epoch):
             loss_g = loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL + loss_norm
 
         scaler.scale(loss_g).backward()
+        nn.utils.clip_grad_norm_(Dec.parameters(), 1.0)
         scaler.step(OptDec)
 
         # train discriminator
@@ -139,6 +140,7 @@ for epoch in range(args.epoch):
                 loss_d += ((logit - 1) ** 2).mean() / len(logits)
 
         scaler.scale(loss_d).backward()
+        nn.utils.clip_grad_norm_(Dis.parameters(), 1.0)
         scaler.step(OptDis)
 
         scaler.update()
