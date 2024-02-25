@@ -20,7 +20,9 @@ class DiscriminatorP(nn.Module):
                 nn.Conv2d(16, 32, (k, 1), (s, 1), (get_padding(5, 1), 0)),
                 nn.Conv2d(32, 64, (k, 1), (s, 1), (get_padding(5, 1), 0)),
                 nn.Conv2d(64, 128, (k, 1), (s, 1), (get_padding(5, 1), 0)),
-                nn.Conv2d(128, 256, (k, 1), 1, (2, 0), groups=8),
+                nn.Conv2d(128, 256, (k, 1), (s, 1), (get_padding(5, 1), 0)),
+                nn.Conv2d(256, 256, (k, 1), (s, 1), (get_padding(5, 1), 0)),
+                nn.Conv2d(256, 256, (k, 1), 1, (2, 0), groups=8),
                 ]
         self.convs = nn.ModuleList([norm_f(c) for c in convs])
         self.post = norm_f(nn.Conv2d(256, 1, (3, 1), 1, (1, 0)))
@@ -74,6 +76,8 @@ class DiscriminatorS(nn.Module):
                 nn.Conv1d(32, 64, 41, 2, 20, groups=2),
                 nn.Conv1d(64, 128, 41, 2, 20, groups=4),
                 nn.Conv1d(128, 256, 41, 2, 20, groups=8),
+                nn.Conv1d(256, 256, 41, 2, 20, groups=8),
+                nn.Conv1d(256, 256, 41, 2, 20, groups=8),
                 nn.Conv1d(256, 256, 41, 2, 20, groups=8),
                 nn.Conv1d(256, 256, 41, 2, 20, groups=8),
                 nn.Conv1d(256, 256, 41, 2, 20, groups=8),
