@@ -83,7 +83,7 @@ class PreNet(nn.Module):
                  output_channels=256,
                  cond_channels=256,
                  spk_dim=256,
-                 num_harmonics=15,
+                 num_harmonics=0,
                  frame_size=480,
                  kernel_size=3):
         super().__init__()
