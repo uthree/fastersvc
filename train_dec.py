@@ -32,7 +32,7 @@ parser.add_argument('-b', '--batch-size', default=16, type=int)
 parser.add_argument('--save-interval', type=int, default=100)
 parser.add_argument('-fp16', default=False, type=bool)
 
-parser.add_argument('--weight-adv', default=0.1, type=float)
+parser.add_argument('--weight-adv', default=0.0, type=float)
 parser.add_argument('--weight-feat', default=2.0, type=float)
 parser.add_argument('--weight-mel', default=1.0, type=float)
 
