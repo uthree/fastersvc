@@ -47,8 +47,7 @@ def oscillate_harmonics(f0,
                         num_harmonics=0,
                         begin_point=0,
                         min_frequency=10.0,
-                        noise_scale=0.003,
-                        harmonics_scale=0.1):
+                        ):
     N = f0.shape[0]
     Nh = num_harmonics + 1
     Lf = f0.shape[2]
@@ -73,9 +72,6 @@ def oscillate_harmonics(f0,
     # unvoiced / voiced filter
     uv = F.interpolate((f0 > min_frequency).to(torch.float), Lw, mode='linear')
     harmonics = harmonics * uv
-
-    # add noise
-    harmonics = harmonics * harmonics_scale + torch.randn_like(harmonics) * noise_scale
 
     return harmonics, phi
 

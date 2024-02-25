@@ -94,13 +94,18 @@ class Convertor(nn.Module):
         p = 440 * 2 ** (scale / 12)
 
         # oscillate harmonics and noise
-        src, phase_out = oscillate_harmonics(
+        harmonics, phase_out = oscillate_harmonics(
                 p,
                 phase_buffer,
                 self.frame_size,
                 self.sample_rate,
                 self.num_harmonics,
                 begin_point=buffer_size-1)
+
+        L = harmonics.shape[2]
+        N = harmonics.shape[0]
+        noise = torch.randn(N, 1, L, device=device)
+        src = torch.cat([harmonics, noise], dim=1)
 
         # calculate next phase buffer
         new_phase_buffer = phase_out[:, :, -1].unsqueeze(2)

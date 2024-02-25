@@ -97,7 +97,7 @@ class PreNet(nn.Module):
         self.c2 = DCC(internal_channels, internal_channels, 3, 3)
         self.film2 = FiLM(internal_channels, cond_channels)
         self.output_layer = DCC(internal_channels, internal_channels, 3, 9)
-        self.to_harmonic_amps = DCC(internal_channels, num_harmonics+1, 3, 9)
+        self.to_harmonic_amps = DCC(internal_channels, num_harmonics+2, 3, 9)
 
     def forward(self, x, e, spk):
         c = self.energy_in(e) + self.spk_in(spk)
@@ -160,8 +160,10 @@ class Decoder(nn.Module):
         N = p.shape[0]
         device = p.device
 
-        # generate harmonics
-        source_signals, _ = oscillate_harmonics(p, 0, self.frame_size, self.sample_rate, self.num_harmonics)
+        # generate harmonics and noises
+        harmonics, _ = oscillate_harmonics(p, 0, self.frame_size, self.sample_rate, self.num_harmonics)
+        noise = torch.randn(N, 1, L, device=device)
+        source_signals = torch.cat([harmonics, noise], dim=1)
         return source_signals
 
     def forward(self, x, e, spk, source_signals):
