@@ -110,6 +110,28 @@ class Upsample(nn.Module):
         return x
 
 
+class AcousticModel(nn.Module):
+    def __init__(self, content_channels, channels, spk_dim, num_layers=4, kernel_size=5, causal=True, weight_norm=True):
+        super().__init__()
+        self.content_in = DCC(content_channels, channels, kernel_size, 1, 1, weight_norm, causal)
+        self.energy_in = DCC(1, channels, 1, 1, 1, weight_norm, causal)
+        self.spk_in = DCC(spk_dim, channels, 1, 1, 1, weight_norm, causal)
+        self.film = FiLM(channels, channels, weight_norm)
+        self.layers = nn.ModuleList([])
+        for _ in range(num_layers):
+            self.layers.append(
+                    DCC(channels, channels, kernel_size, 1, 1, weight_norm, causal))
+
+    def forward(self, x, e, spk):
+        x = self.content_in(x)
+        c = self.energy_in(e) + self.spk_in(spk)
+        x = self.film(x, c)
+        for l in self.layers:
+            x = F.leaky_relu(x, 0.1)
+            x = l(x)
+        return x
+
+
 class Decoder(nn.Module):
     def __init__(self,
                  resblock_type='2',
@@ -133,11 +155,8 @@ class Decoder(nn.Module):
         self.content_channels = content_channels
         self.spk_dim = spk_dim
 
-        # content input and energy input
-        self.content_input = DCC(content_channels, channels[0], 1, 1, 1, weight_norm, causal)
-        self.energy_input = DCC(1, cond_channels[0], 1, 1, 1, weight_norm, causal)
-        self.speaker_input = DCC(spk_dim, cond_channels[0], 1, 1, 1, weight_norm, causal)
-        self.film = FiLM(channels[0], cond_channels[0], weight_norm)
+        # content input and energy to hidden features
+        self.acoustic_model = AcousticModel(content_channels, channels[0], spk_dim, causal=causal, weight_norm=weight_norm)
 
         # initialize downsample layers
         self.down_input = DCC(num_harmonics + 2, cond_channels[-1], 1, 1, 1, weight_norm, causal)
@@ -170,11 +189,8 @@ class Decoder(nn.Module):
         return source_signals
 
     def forward(self, x, e, spk, source_signals):
-        # prenet
-        c = self.speaker_input(spk) + self.energy_input(e)
-        x = self.content_input(x)
-        x = F.leaky_relu(x, 0.1)
-        x = self.film(x, c)
+        # acoustic model
+        x = self.acoustic_model(x, e, spk)
 
         # downsamples
         skips = []
