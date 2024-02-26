@@ -84,16 +84,24 @@ class DCC(nn.Module):
                  kernel_size,
                  dilation=1,
                  groups=1,
-                 weight_norm=False
+                 weight_norm=False,
+                 causal=True,
                  ):
         super().__init__()
+        self.causal = causal
         self.conv = nn.Conv1d(input_channels, output_channels, kernel_size, dilation=dilation, groups=groups)
-        self.pad_size = (kernel_size - 1) * dilation
+        if causal:
+            self.pad_size = (kernel_size - 1) * dilation
+        else:
+            self.pad_size = kernel_size * dilation // 2
         if weight_norm:
             self.conv = nn.utils.weight_norm(self.conv)
 
     def forward(self, x):
-        x = F.pad(x, [self.pad_size, 0], mode='replicate')
+        if self.causal:
+            x = F.pad(x, [self.pad_size, 0], mode='replicate')
+        else:
+            x = F.pad(x, self.pad_size, mode='replicate')
         x = self.conv(x)
         return x
 
@@ -151,7 +159,7 @@ def compute_f0_dio(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=20
         return pitchs
 
 
-def compute_f0_harvest(wf, sample_rate=24000, segment_size=480, f0_min=20, f0_max=20000):
+def compute_f0_harvest(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=20000):
     if wf.ndim == 1:
         device = wf.device
         signal = wf.detach().cpu().numpy()
