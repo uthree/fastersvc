@@ -111,7 +111,7 @@ class Upsample(nn.Module):
 
 
 class AcousticModel(nn.Module):
-    def __init__(self, content_channels, channels, spk_dim, num_layers=4, kernel_size=5, causal=True, weight_norm=True):
+    def __init__(self, content_channels, channels, spk_dim, num_layers=6, kernel_size=3, causal=True, weight_norm=True):
         super().__init__()
         self.content_in = DCC(content_channels, channels, kernel_size, 1, 1, weight_norm, causal)
         self.energy_in = DCC(1, channels, 1, 1, 1, weight_norm, causal)

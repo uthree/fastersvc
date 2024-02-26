@@ -121,7 +121,7 @@ class MultiScaleDiscriminator(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self,
                  scales=[1, 2, 4],
-                 periods=[2, 3, 5, 7, 11],
+                 periods=[3, 5, 7, 11, 17],
                  mpd_num_layers=4,
                  msd_num_layers=6,
                  mpd_channels=16,
