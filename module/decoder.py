@@ -50,16 +50,16 @@ class ResBlock1(nn.Module):
         for d in dilations:
             self.convs1.append(
                     DCC(channels, channels, kernel_size, d, 1, weight_norm, causal))
-            self.convs1.append(
+            self.convs2.append(
                     DCC(channels, channels, kernel_size, 1, 1, weight_norm, causal)) 
 
     def forward(self, x):
         for c1, c2 in zip(self.convs1, self.convs2):
             res = x
             x = F.leaky_relu(x, 0.1)
-            x = self.c1(x)
+            x = c1(x)
             x = F.leaky_relu(x, 0.1)
-            x = self.c2(x)
+            x = c2(x)
             x = x + res
         return x
 
@@ -104,7 +104,7 @@ class Upsample(nn.Module):
             if xs is None:
                 xs = b(x)
             else:
-                xs += b(x)
+                xs = xs + b(x)
         x = xs / self.num_kernels
         x = self.out_conv(x)
         return x
@@ -134,10 +134,10 @@ class AcousticModel(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self,
-                 resblock_type='2',
+                 resblock_type='1',
                  channels=[256, 128, 64, 32],
-                 kernel_sizes=[3, 5, 7],
-                 dilations=[[1, 2], [2, 6], [3, 12]],
+                 kernel_sizes=[3],
+                 dilations=[[1, 3, 5]],
                  factors=[4, 4, 5, 6],
                  cond_channels=[256, 128, 64, 32],
                  num_harmonics=0,

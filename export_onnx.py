@@ -53,11 +53,12 @@ print("Exporting decoder")
 content_channels = convertor.decoder.content_channels
 frames_per_second = convertor.decoder.sample_rate // convertor.decoder.frame_size
 spk_dim = convertor.decoder.spk_dim
+num_harmonics = convertor.decoder.num_harmonics
 
 z = torch.randn(1, content_channels, frames_per_second) # content
 e = torch.randn(1, 1, frames_per_second) # energy
 spk = torch.randn(1, spk_dim, 1) # speaker embedding
-src = torch.randn(1, 1, convertor.decoder.sample_rate) # source signal
+src = torch.randn(1, num_harmonics+2, convertor.decoder.sample_rate) # source signal
 torch.onnx.export(
         convertor.decoder,
         (z, e, spk, src),
