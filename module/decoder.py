@@ -137,7 +137,7 @@ class Decoder(nn.Module):
                  resblock_type='1',
                  channels=[256, 128, 64, 32],
                  kernel_sizes=[3],
-                 dilations=[[1, 3, 5]],
+                 dilations=[[1, 3, 9]],
                  factors=[4, 4, 5, 6],
                  cond_channels=[256, 128, 64, 32],
                  num_harmonics=0,
