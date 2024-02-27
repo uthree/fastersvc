@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from module.dataset import Dataset
 from module.content_encoder import ContentEncoder
-from transformers import HubertModel
+from transformers import HubertForCTC
 
 parser = argparse.ArgumentParser(description="distillation of hubert")
 
@@ -39,8 +39,8 @@ def save_models(ce):
 
 device = torch.device(args.device)
 
-hubert = torch.hub.load("bshall/hubert:main", "hubert_soft", trust_repo=True)
-hubert = hubert.to(device)
+hubert = HubertForCTC.from_pretrained("facebook/hubert-large-ls960-ft").to(device)
+hubert.eval()
 
 CE = load_or_init_models(device)
 ds = Dataset(args.dataset_cache)
@@ -48,6 +48,7 @@ dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 Opt = optim.RAdam(CE.parameters(), lr=args.learning_rate)
+cross_entropy_loss = nn.CrossEntropyLoss()
 
 # Training
 step_count = 0
@@ -59,12 +60,13 @@ for epoch in range(args.epoch):
         N = wave.shape[0]
         wave = wave.to(device)
 
-        hubert_features = hubert.units(resample(wave.unsqueeze(1), 24000, 16000)).transpose(1, 2)
-
+        with torch.no_grad():
+            wave_16k = resample(wave, 24000, 16000)
+            pseudo_label = hubert(wave_16k).logits.argmax(dim=2)
         with torch.cuda.amp.autocast(enabled=args.fp16):
             out = CE.encode(wave)
-            pred_feat = CE.to_hubert(out)
-            loss = (F.interpolate(hubert_features, pred_feat.shape[2]) - pred_feat).abs().mean()
+            pred = F.interpolate(CE.to_hubert(out), pseudo_label.shape[1])
+            loss = cross_entropy_loss(pred, pseudo_label)
 
         scaler.scale(loss).backward()
         scaler.step(Opt)

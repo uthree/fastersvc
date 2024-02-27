@@ -59,7 +59,7 @@ python3 train_pe.py
 ```
 
 3. コンテンツエンコーダーを学習。  
-HuBERT-softを蒸留する。
+HuBERT CTCを蒸留する。
 ```sh
 python3 train_ce.py
 ```

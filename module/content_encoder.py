@@ -13,7 +13,7 @@ class ContentEncoder(nn.Module):
                  kernel_size=5,
                  dilations=[1, 3, 9, 1, 3, 9],
                  output_channels=256,
-                 hubert_channels=256,
+                 hubert_labels=32,
                  ):
         super().__init__()
         self.n_fft = n_fft
@@ -26,7 +26,7 @@ class ContentEncoder(nn.Module):
                 *[ResBlock(internal_channels, kernel_size, dilation=d, mlp_mul=3, norm=True) for d in dilations])
 
         self.output_layer = nn.Conv1d(internal_channels, output_channels, 1, bias=False)
-        self.to_hubert = nn.Conv1d(output_channels, hubert_channels, 1)
+        self.to_hubert = nn.Conv1d(output_channels, hubert_labels, 1)
 
     def forward(self, spec):
         x = self.input_layer(spec)

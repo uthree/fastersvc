@@ -62,7 +62,7 @@ python3 train_pe.py
 ````
 
 3. Learn content encoder.
-Distill HuBERT-soft.
+Distill HuBERT CTC.
 ```sh
 python3 train_ce.py
 ````
