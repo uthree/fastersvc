@@ -108,10 +108,6 @@ class Upsample(nn.Module):
     def __init__(self, input_channels, output_channels, cond_channels, factor, kernel_sizes, dilations, weight_norm, causal, resblock_type):
         super().__init__()
         self.factor = factor
-        
-        self.up_conv = nn.ConvTranspose1d(input_channels, input_channels, factor*2, factor)
-        if weight_norm:
-            self.up_conv = nn.utils.weight_norm(self.up_conv)
 
         self.film = FiLM(input_channels, cond_channels, weight_norm)
         self.num_kernels = len(dilations)
@@ -131,8 +127,7 @@ class Upsample(nn.Module):
 
     def forward(self, x, c):
         x = self.film(x, c)
-        x = self.up_conv(x)
-        x = x[:, :, :-self.factor]
+        x = F.interpolate(x, scale_factor=self.factor)
         xs = None
         for b in self.res_blocks:
             if xs is None:
@@ -145,7 +140,7 @@ class Upsample(nn.Module):
 
 
 class AcousticModel(nn.Module):
-    def __init__(self, content_channels, channels, spk_dim, num_layers=6, kernel_size=3, causal=True, weight_norm=True):
+    def __init__(self, content_channels, channels, spk_dim, num_layers=4, kernel_size=3, causal=True, weight_norm=True):
         super().__init__()
         self.content_in = DCC(content_channels, channels, kernel_size, 1, 1, weight_norm, causal)
         self.energy_in = DCC(1, channels, 1, 1, 1, weight_norm, causal)
@@ -169,11 +164,11 @@ class AcousticModel(nn.Module):
 class Decoder(nn.Module):
     def __init__(self,
                  resblock_type='3',
-                 channels=[256, 128, 64, 32],
+                 channels=[192, 96, 48, 24],
                  kernel_sizes=[3],
                  dilations=[[1, 3, 9, 27]],
                  factors=[4, 4, 5, 6],
-                 cond_channels=[256, 128, 64, 32],
+                 cond_channels=[192, 96, 48, 24],
                  num_harmonics=0,
                  content_channels=256,
                  spk_dim=256,
