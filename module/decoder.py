@@ -108,15 +108,22 @@ class Upsample(nn.Module):
     def __init__(self, input_channels, output_channels, cond_channels, factor, kernel_sizes, dilations, weight_norm, causal, resblock_type):
         super().__init__()
         self.factor = factor
+        
+        self.up_conv = nn.ConvTranspose1d(input_channels, input_channels, factor*2, factor)
+        if weight_norm:
+            self.up_conv = nn.utils.weight_norm(self.up_conv)
+
         self.film = FiLM(input_channels, cond_channels, weight_norm)
         self.num_kernels = len(dilations)
         self.res_blocks = nn.ModuleList([])
+
         if resblock_type == '1':
             resblock = ResBlock1
         elif resblock_type == '2':
             resblock = ResBlock2
         elif resblock_type == '3':
             resblock = ResBlock3
+
         for k, ds in zip(kernel_sizes, dilations):
             self.res_blocks.append(
                     resblock(input_channels, k, ds, causal, weight_norm))
@@ -124,7 +131,8 @@ class Upsample(nn.Module):
 
     def forward(self, x, c):
         x = self.film(x, c)
-        x = F.interpolate(x, scale_factor=self.factor, mode='linear')
+        x = self.up_conv(x)
+        x = x[:, :, :-self.factor]
         xs = None
         for b in self.res_blocks:
             if xs is None:
