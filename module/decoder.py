@@ -80,6 +80,30 @@ class ResBlock2(nn.Module):
         return x
 
 
+# len(dilations) should be 4
+class ResBlock3(nn.Module):
+    def __init__(self, channels, kernel_size, dilations, causal, weight_norm):
+        super().__init__()
+        self.c1 = DCC(channels, channels, kernel_size, dilations[0], 1, weight_norm, causal)
+        self.c2 = DCC(channels, channels, kernel_size, dilations[1], 1, weight_norm, causal)
+        self.c3 = DCC(channels, channels, kernel_size, dilations[2], 1, weight_norm, causal)
+        self.c4 = DCC(channels, channels, kernel_size, dilations[3], 1, weight_norm, causal)
+
+    def forward(self, x):
+        res = x
+        x = F.leaky_relu(x, 0.1)
+        x = self.c1(x)
+        x = F.leaky_relu(x, 0.1)
+        x = self.c2(x)
+        x = x + res
+        x = F.leaky_relu(x, 0.1)
+        x = self.c3(x)
+        x = F.leaky_relu(x, 0.1)
+        x = self.c4(x)
+        x = x + res
+        return x
+
+
 class Upsample(nn.Module):
     def __init__(self, input_channels, output_channels, cond_channels, factor, kernel_sizes, dilations, weight_norm, causal, resblock_type):
         super().__init__()
@@ -91,6 +115,8 @@ class Upsample(nn.Module):
             resblock = ResBlock1
         elif resblock_type == '2':
             resblock = ResBlock2
+        elif resblock_type == '3':
+            resblock = ResBlock3
         for k, ds in zip(kernel_sizes, dilations):
             self.res_blocks.append(
                     resblock(input_channels, k, ds, causal, weight_norm))
@@ -134,10 +160,10 @@ class AcousticModel(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self,
-                 resblock_type='1',
+                 resblock_type='3',
                  channels=[256, 128, 64, 32],
                  kernel_sizes=[3],
-                 dilations=[[1, 3, 9]],
+                 dilations=[[1, 3, 9, 27]],
                  factors=[4, 4, 5, 6],
                  cond_channels=[256, 128, 64, 32],
                  num_harmonics=0,
