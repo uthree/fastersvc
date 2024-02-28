@@ -81,6 +81,7 @@ dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 
 OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
+OptSE = optim.AdamW(SE.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 
 logmel_loss = LogMelSpectrogramLoss().to(device)
@@ -101,30 +102,36 @@ for epoch in range(args.epoch):
 
         # train generator and speaker encoder
         OptDec.zero_grad()
+        OptSE.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
 
             z = CE.encode(wave)
             z = instance_norm(z)
             e = energy(wave)
             spk = SE(spk_id)
-            fake = Dec.synthesize(z, f0, e, spk)
+            recon = Dec.synthesize(z, f0, e, spk)
+            f0_shift = f0 * (torch.rand(N, 1, 1, device=device))
+            spk_another = spk.roll(1, dims=0).detach()
+            fake = Dec.synthesize(z, f0_shift, e, spk_another)
 
             loss_adv = 0
             loss_feat = 0
-            logits, feats_fake = Dis(center(fake))
-            loss_mel = logmel_loss(fake, wave)
+            logits, feats_recon = Dis(center(recon))
+            loss_mel = logmel_loss(recon, wave)
 
             _, feats_real = Dis(center(wave))
             for logit in logits:
                 loss_adv += (logit ** 2).mean() / len(logits)
-            for f, r in zip(feats_fake, feats_real):
-                loss_feat += (f - r).abs().mean() / len(feats_fake)
+            for f, r in zip(feats_recon, feats_real):
+                loss_feat += (f - r).abs().mean() / len(feats_recon)
 
             loss_g = loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL
 
         scaler.scale(loss_g).backward()
         nn.utils.clip_grad_norm_(Dec.parameters(), 1.0)
+        nn.utils.clip_grad_norm_(SE.parameters(), 1.0)
         scaler.step(OptDec)
+        scaler.step(OptSE)
 
         # train discriminator
         fake = fake.detach()
