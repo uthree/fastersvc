@@ -143,11 +143,11 @@ class Upsample(nn.Module):
 class Decoder(nn.Module):
     def __init__(self,
                  resblock_type='3',
-                 channels=[192, 96, 48, 24],
+                 channels=[256, 128, 64, 32],
                  kernel_sizes=[3],
                  dilations=[[1, 3, 9, 27]],
                  factors=[4, 4, 5, 6],
-                 cond_channels=[192, 96, 48, 24],
+                 cond_channels=[256, 128, 64, 32],
                  num_harmonics=0,
                  content_channels=64,
                  spk_dim=256,
@@ -164,9 +164,9 @@ class Decoder(nn.Module):
         self.spk_dim = spk_dim
 
         # content input and energy to hidden features
-        self.content_in = DCC(content_channels, channels[0], 1, 1, 1, weight_norm, causal)
+        self.content_in = DCC(content_channels, channels[0], 3, 1, 1, weight_norm, causal)
         self.spk_in = DCC(spk_dim, channels[0], 1, 1, 1, weight_norm, causal)
-        self.energy_in = DCC(1, channels[0], 1, 1, 1, weight_norm, causal)
+        self.energy_in = DCC(1, channels[0], 1, 1, 1,weight_norm, causal)
         self.film = FiLM(channels[0], channels[0], weight_norm)
 
         # initialize downsample layers
@@ -186,7 +186,7 @@ class Decoder(nn.Module):
             self.ups.append(
                     Upsample(u, u_n, c_n, f, kernel_sizes, dilations, weight_norm, causal, resblock_type))
         # output layer
-        self.output_layer = DCC(channels[-1], 1, 7, 1, 1, weight_norm, causal)
+        self.output_layer = DCC(channels[-1], 1, 3, 1, 1, weight_norm, causal)
 
     def generate_source(self, p):
         L = p.shape[2] * self.frame_size
