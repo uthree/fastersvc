@@ -12,7 +12,7 @@ class ContentEncoder(nn.Module):
                  internal_channels=256,
                  kernel_size=5,
                  dilations=[1, 3, 9, 1],
-                 output_channels=4,
+                 output_channels=64,
                  hubert_labels=32,
                  ):
         super().__init__()
