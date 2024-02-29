@@ -96,6 +96,7 @@ class ResBlock3(nn.Module):
         x = F.leaky_relu(x, 0.1)
         x = self.c2(x)
         x = x + res
+        res = x
         x = F.leaky_relu(x, 0.1)
         x = self.c3(x)
         x = F.leaky_relu(x, 0.1)
