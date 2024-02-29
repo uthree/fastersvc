@@ -110,8 +110,8 @@ for epoch in range(args.epoch):
             e = energy(wave)
             spk = SE(spk_id)
             recon = Dec.synthesize(z, f0, e, spk)
-            f0_shift = f0 * (torch.rand(N, 1, 1, device=device))
-            spk_another = spk.roll(1, dims=0).detach()
+            f0_shift = f0 * (torch.rand(N, 1, 1, device=device) * 2.0)
+            spk_another = spk.roll(1, dims=0)
             fake = Dec.synthesize(z, f0_shift, e, spk_another)
 
             loss_adv = 0
