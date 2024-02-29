@@ -136,6 +136,7 @@ class Upsample(nn.Module):
             else:
                 xs = xs + b(x)
         x = xs / self.num_kernels
+        x = F.leaky_relu(x, 0.1)
         x = self.out_conv(x)
         return x
 
