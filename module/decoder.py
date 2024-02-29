@@ -150,7 +150,7 @@ class Decoder(nn.Module):
                  factors=[4, 4, 5, 6],
                  cond_channels=[256, 128, 64, 32],
                  num_harmonics=0,
-                 content_channels=64,
+                 content_channels=4,
                  spk_dim=256,
                  sample_rate=24000,
                  causal=True,
