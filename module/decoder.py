@@ -131,6 +131,7 @@ class Upsample(nn.Module):
 
     def forward(self, x, c):
         x = self.film(x, c)
+        x = F.leaky_relu(x, 0.1)
         x = self.up_conv(x)
         x = x[:, :, :-self.factor]
         xs = None
