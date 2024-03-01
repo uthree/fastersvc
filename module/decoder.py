@@ -42,112 +42,44 @@ class Downsample(nn.Module):
         return x
 
 
-class ResBlock1(nn.Module):
-    def __init__(self, channels, kernel_size, dilations, weight_norm, causal):
+class Upsample(nn.Module):
+    def __init__(self, input_channels, output_channels, cond_channels, factor, weight_norm, causal):
         super().__init__()
-        self.convs1 = nn.ModuleList([])
-        self.convs2 = nn.ModuleList([])
-        for d in dilations:
-            self.convs1.append(
-                    DCC(channels, channels, kernel_size, d, 1, weight_norm, causal))
-            self.convs2.append(
-                    DCC(channels, channels, kernel_size, 1, 1, weight_norm, causal)) 
+        self.factor = factor
+        self.c1 = DCC(input_channels, input_channels, 3, 1, 1, weight_norm, causal)
+        self.c2 = DCC(input_channels, input_channels, 3, 3, 1, weight_norm, causal)
+        self.film1 = FiLM(input_channels, cond_channels, weight_norm)
+        self.c3 = DCC(input_channels, input_channels, 3, 9, 1, weight_norm, causal)
+        self.c4 = DCC(input_channels, input_channels, 3, 27, 1, weight_norm, causal)
+        self.film2 = FiLM(input_channels, cond_channels, weight_norm)
+        self.c5 = DCC(input_channels, output_channels, 3, 1, 1, weight_norm, causal)
 
-    def forward(self, x):
-        for c1, c2 in zip(self.convs1, self.convs2):
-            res = x
-            x = F.leaky_relu(x, 0.1)
-            x = c1(x)
-            x = F.leaky_relu(x, 0.1)
-            x = c2(x)
-            x = x + res
-        return x
-
-
-class ResBlock2(nn.Module):
-    def __init__(self, channels, kernel_size, dilations, causal, weight_norm):
-        super().__init__()
-        self.convs = nn.ModuleList([])
-        for d in dilations:
-            self.convs.append(DCC(channels, channels, kernel_size, d, 1, weight_norm, causal))
-
-    def forward(self, x):
-        for c in self.convs:
-            res = x
-            x = F.leaky_relu(x, 0.1)
-            x = c(x)
-            x = x + res
-        return x
-
-
-# len(dilations) should be 4
-class ResBlock3(nn.Module):
-    def __init__(self, channels, kernel_size, dilations, causal, weight_norm):
-        super().__init__()
-        self.c1 = DCC(channels, channels, kernel_size, dilations[0], 1, weight_norm, causal)
-        self.c2 = DCC(channels, channels, kernel_size, dilations[1], 1, weight_norm, causal)
-        self.c3 = DCC(channels, channels, kernel_size, dilations[2], 1, weight_norm, causal)
-        self.c4 = DCC(channels, channels, kernel_size, dilations[3], 1, weight_norm, causal)
-
-    def forward(self, x):
+    def forward(self, x, c):
+        x = F.interpolate(x, scale_factor=self.factor)
+        c = F.interpolate(c, scale_factor=self.factor)
         res = x
         x = F.leaky_relu(x, 0.1)
         x = self.c1(x)
         x = F.leaky_relu(x, 0.1)
         x = self.c2(x)
+        x = self.film1(x, c)
         x = x + res
         res = x
         x = F.leaky_relu(x, 0.1)
         x = self.c3(x)
         x = F.leaky_relu(x, 0.1)
-        x = self.c4(x)
+        x = self.c3(x)
+        x = self.film2(x, c)
         x = x + res
-        return x
-
-
-class Upsample(nn.Module):
-    def __init__(self, input_channels, output_channels, cond_channels, factor, kernel_sizes, dilations, weight_norm, causal, resblock_type):
-        super().__init__()
-        self.factor = factor
-
-        self.film = FiLM(input_channels, cond_channels, weight_norm)
-        self.num_kernels = len(dilations)
-        self.res_blocks = nn.ModuleList([])
-
-        if resblock_type == '1':
-            resblock = ResBlock1
-        elif resblock_type == '2':
-            resblock = ResBlock2
-        elif resblock_type == '3':
-            resblock = ResBlock3
-
-        for k, ds in zip(kernel_sizes, dilations):
-            self.res_blocks.append(
-                    resblock(input_channels, k, ds, causal, weight_norm))
-        self.out_conv = DCC(input_channels, output_channels, 3, 1, 1, weight_norm, causal)
-
-    def forward(self, x, c):
-        x = self.film(x, c)
-        x = F.interpolate(x, scale_factor=self.factor)
-        xs = None
-        for b in self.res_blocks:
-            if xs is None:
-                xs = b(x)
-            else:
-                xs = xs + b(x)
-        x = xs / self.num_kernels
         x = F.leaky_relu(x, 0.1)
-        x = self.out_conv(x)
+        x = self.c5(x)
         return x
-
 
 
 class Decoder(nn.Module):
     def __init__(self,
                  resblock_type='3',
                  channels=[256, 128, 64, 32],
-                 kernel_sizes=[3],
-                 dilations=[[1, 3, 9, 27]],
                  factors=[4, 4, 5, 6],
                  cond_channels=[256, 128, 64, 32],
                  num_harmonics=0,
@@ -178,7 +110,7 @@ class Decoder(nn.Module):
         cond_next = cond[1:] + [cond[-1]]
         for c, c_n, f in zip(cond, cond_next, reversed(factors)):
             self.downs.append(
-                    Downsample(c, c_n, f))
+                    Downsample(c, c_n, f, weight_norm, causal))
 
         # initialize upsample layers
         self.ups = nn.ModuleList([])
@@ -186,7 +118,7 @@ class Decoder(nn.Module):
         up_next = channels[1:] + [channels[-1]]
         for u, u_n, c_n, f in zip(up, up_next, reversed(cond_next), factors):
             self.ups.append(
-                    Upsample(u, u_n, c_n, f, kernel_sizes, dilations, weight_norm, causal, resblock_type))
+                    Upsample(u, u_n, c_n, f, weight_norm, causal))
         # output layer
         self.output_layer = DCC(channels[-1], 1, 3, 1, 1, weight_norm, causal)
 
