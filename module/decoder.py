@@ -111,7 +111,7 @@ class Upsample(nn.Module):
         self.factor = factor
         self.up_conv = nn.ConvTranspose1d(input_channels, input_channels, factor*2, factor)
         if weight_norm:
-            self.up_conv = nn.utils.weight_norm(up_conv)
+            self.up_conv = nn.utils.weight_norm(self.up_conv)
 
         self.film = FiLM(input_channels, cond_channels, weight_norm)
         self.num_kernels = len(dilations)
