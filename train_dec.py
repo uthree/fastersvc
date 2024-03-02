@@ -34,7 +34,7 @@ parser.add_argument('-fp16', default=False, type=bool)
 
 parser.add_argument('--weight-adv', default=1.0, type=float)
 parser.add_argument('--weight-feat', default=1.0, type=float)
-parser.add_argument('--weight-mel', default=5.0, type=float)
+parser.add_argument('--weight-mel', default=45.0, type=float)
 
 args = parser.parse_args()
 
@@ -104,7 +104,6 @@ for epoch in range(args.epoch):
         OptDec.zero_grad()
         OptSE.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
-
             z = CE.encode(wave)
             z = instance_norm(z)
             e = energy(wave)

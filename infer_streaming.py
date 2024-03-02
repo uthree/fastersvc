@@ -11,7 +11,7 @@ import numpy as np
 import pyaudio
 
 from module.convertor import Convertor
-from module.common import energy, match_features, oscillate_harmonics
+from module.common import energy, oscillate_harmonics
 
 
 FRAME_SIZE=480
