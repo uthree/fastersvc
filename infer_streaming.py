@@ -83,8 +83,7 @@ while True:
             chunk,
             buffer,
             spk,
-            args.pitch_shift, 
-            alpha=args.alpha
+            args.pitch_shift
             )
     chunk = gain(chunk, args.output_gain)
 
