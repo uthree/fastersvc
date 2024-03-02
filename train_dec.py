@@ -115,8 +115,8 @@ for epoch in range(args.epoch):
             fake = Dec.synthesize(z, f0_shift, e, spk_another)
 
             # remove nan
-            fake[fake.isnan()] = 0
-            recon[recon.isnan()] = 0
+            #fake[fake.isnan()] = 0
+            #recon[recon.isnan()] = 0
 
             loss_adv = 0
             loss_feat = 0
@@ -125,10 +125,10 @@ for epoch in range(args.epoch):
 
             _, feats_real = Dis(center(wave))
             for logit in logits:
-                logit[logit.isnan()] = 0
+                #logit[logit.isnan()] = 0
                 loss_adv += (logit ** 2).mean() / len(logits)
             for f, r in zip(feats_recon, feats_real):
-                logit[logit.isnan()] = 0
+                #logit[logit.isnan()] = 0
                 loss_feat += (f - r).abs().mean() / len(feats_recon)
 
             loss_g = loss_adv * WEIGHT_ADV + loss_feat * WEIGHT_FEAT + loss_mel * WEIGHT_MEL
