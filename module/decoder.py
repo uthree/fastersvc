@@ -57,6 +57,7 @@ class Upsample(nn.Module):
     def forward(self, x, c):
         x = F.interpolate(x, scale_factor=self.factor)
         c = F.interpolate(c, scale_factor=self.factor)
+
         res = x
         x = F.leaky_relu(x, 0.1)
         x = self.c1(x)
@@ -64,13 +65,15 @@ class Upsample(nn.Module):
         x = self.c2(x)
         x = self.film1(x, c)
         x = x + res
+
         res = x
         x = F.leaky_relu(x, 0.1)
         x = self.c3(x)
         x = F.leaky_relu(x, 0.1)
-        x = self.c3(x)
+        x = self.c4(x)
         x = self.film2(x, c)
         x = x + res
+
         x = F.leaky_relu(x, 0.1)
         x = self.c5(x)
         return x
@@ -78,7 +81,6 @@ class Upsample(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self,
-                 resblock_type='3',
                  channels=[256, 128, 64, 32],
                  factors=[4, 4, 5, 6],
                  cond_channels=[256, 128, 64, 32],
