@@ -11,12 +11,14 @@ def safe_log(x):
 class MultiScaleSTFTLoss(nn.Module):
     def __init__(
             self,
-            scales=[32, 64, 128, 256, 512, 1024]
+            scales=[16, 32, 64, 128, 256, 512]
             ):
         super().__init__()
         self.scales = scales
 
     def forward(self, x, y):
+        x = x.to(torch.float)
+        y = y.to(torch.float)
         loss = 0
         num_scales = len(self.scales)
         for s in self.scales:
@@ -33,9 +35,9 @@ class LogMelSpectrogramLoss(nn.Module):
     def __init__(
             self,
             sample_rate=24000,
-            n_fft=1024,
-            hop_length=256,
-            n_mels=80,
+            n_fft=2048,
+            hop_length=512,
+            n_mels=128,
             ):
         super().__init__()
         self.to_mel = torchaudio.transforms.MelSpectrogram(
@@ -47,13 +49,13 @@ class LogMelSpectrogramLoss(nn.Module):
     def forward(self, x, y):
         x = x.to(torch.float)
         y = y.to(torch.float)
-        
+
         x = safe_log(self.to_mel(x))
         y = safe_log(self.to_mel(y))
 
-        x[x.isnan()] = 0
         x[x.isinf()] = 0
-        y[y.isnan()] = 0
+        x[x.isnan()] = 0
         y[y.isinf()] = 0
+        y[y.isnan()] = 0
 
         return (x - y).abs().mean()

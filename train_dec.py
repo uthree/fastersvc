@@ -9,7 +9,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from module.dataset import Dataset
-from module.loss import MultiScaleSTFTLoss, LogMelSpectrogramLoss
+from module.loss import LogMelSpectrogramLoss, MultiScaleSTFTLoss
 from module.pitch_estimator import PitchEstimator
 from module.content_encoder import ContentEncoder
 from module.decoder import Decoder
@@ -32,13 +32,13 @@ parser.add_argument('-b', '--batch-size', default=16, type=int)
 parser.add_argument('--save-interval', type=int, default=100)
 parser.add_argument('-fp16', default=False, type=bool)
 
-parser.add_argument('--weight-adv', default=2.0, type=float)
-parser.add_argument('--weight-stft', default=1.0, type=float)
+parser.add_argument('--weight-adv', default=1.0, type=float)
+parser.add_argument('--weight-stft', default=45.0, type=float)
 
 args = parser.parse_args()
 
-WEIGHT_STFT = args.weight_stft
 WEIGHT_ADV = args.weight_adv
+WEIGHT_STFT = args.weight_stft
 
 def load_or_init_models(device=torch.device('cpu')):
     dec = Decoder().to(device)
@@ -82,8 +82,8 @@ OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 OptSE = optim.AdamW(SE.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 
-multiscale_stft_loss = MultiScaleSTFTLoss().to(device)
 logmel_loss = LogMelSpectrogramLoss().to(device)
+multiscale_stft_loss = MultiScaleSTFTLoss().to(device)
 
 # Training
 step_count = 0
@@ -110,14 +110,14 @@ for epoch in range(args.epoch):
             fake = Dec.synthesize(z, f0, e, spk)
 
             loss_adv = 0
-            loss_stft = multiscale_stft_loss(fake, wave)
             loss_mel = logmel_loss(fake, wave)
+            loss_stft = multiscale_stft_loss(fake, wave)
 
-            logits, _ = Dis(center(wave))
+            logits, _ = Dis(center(fake))
             for logit in logits:
                 loss_adv += (logit ** 2).mean() / len(logits)
 
-            loss_g = loss_adv * WEIGHT_ADV + loss_stft
+            loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT
 
         scaler.scale(loss_g).backward()
         nn.utils.clip_grad_norm_(Dec.parameters(), 1.0)
@@ -145,7 +145,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Epoch: {epoch}, Step: {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT.: {loss_stft.item():.4f}, Mel.: {loss_mel.item():.4f}")
+        tqdm.write(f"Epoch: {epoch}, Step: {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT: {loss_stft.item():.4f} Mel.: {loss_mel.item():.4f}")
 
         bar.update(N)
 
