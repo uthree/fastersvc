@@ -32,7 +32,7 @@ class MultiScaleSTFTLoss(nn.Module):
 class LogMelSpectrogramLoss(nn.Module):
     def __init__(
             self,
-            sample_rate=16000,
+            sample_rate=24000,
             n_fft=1024,
             hop_length=256,
             n_mels=128

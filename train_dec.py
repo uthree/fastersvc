@@ -28,8 +28,9 @@ parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
 parser.add_argument('-e', '--epoch', default=60, type=int)
 parser.add_argument('-b', '--batch-size', default=16, type=int)
-parser.add_argument('-len', '--length', default=32000, type=int)
+parser.add_argument('-len', '--length', default=24000, type=int)
 parser.add_argument('-m', '--max-data', default=-1, type=int)
+parser.add_argument('--save-interval', default=100, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
 parser.add_argument('--weight-adv', default=1.0, type=float)
@@ -152,7 +153,7 @@ for epoch in range(args.epoch):
 
         bar.update(N)
 
-        if batch % 500 == 0:
+        if batch % args.save_interval == 0:
             save_models(Dec, Dis)
 
 print("Training Complete!")

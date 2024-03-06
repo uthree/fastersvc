@@ -7,8 +7,8 @@ from .common import ResBlock, spectrogram
 
 class PitchEstimator(nn.Module):
     def __init__(self,
-                 n_fft=1280,
-                 hop_size=320,
+                 n_fft=1920,
+                 hop_size=480,
                  internal_channels=512,
                  kernel_size=5,
                  dilations=[1, 3, 9, 1],
@@ -25,7 +25,7 @@ class PitchEstimator(nn.Module):
 
         self.output_layer = nn.Conv1d(internal_channels, output_channels, 1)
         self.res_stack = nn.Sequential(
-                *[ResBlock(internal_channels, kernel_size, dilation=d, norm=True, mlp_mul=3) for d in dilations])
+                *[ResBlock(internal_channels, kernel_size, dilation=d, norm=True, mlp_mul=1) for d in dilations])
 
     @torch.no_grad()
     def estimate(self, wave):

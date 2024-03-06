@@ -22,7 +22,7 @@ parser.add_argument('-a', '--alpha', default=0, type=float)
 parser.add_argument('-idx', '--index', default='NONE')
 parser.add_argument('--normalize', default=False, type=bool)
 parser.add_argument('-pe', '--pitch-estimation', default='default', choices=['default', 'dio', 'harvest'])
-parser.add_argument('-c', '--chunk', default=16000, type=int) # should be n * 320
+parser.add_argument('-c', '--chunk', default=24000, type=int) # should be n * 320
 parser.add_argument('-nc', '--no-chunking', default=False, type=bool)
 parser.add_argument('-b', '--buffer', default=1, type=int)
 
@@ -42,7 +42,7 @@ if args.index == 'NONE':
     print("Loading target...")
     wf, sr = torchaudio.load(args.target)
     wf = wf.to(device)
-    wf = resample(wf, sr, 16000)
+    wf = resample(wf, sr, 24000)
     wf = wf[:1]
     print("Encoding...")
     tgt = convertor.encode_target(wf)
@@ -59,7 +59,7 @@ buffer_size = args.buffer * args.chunk
 for i, path in enumerate(paths):
     print(f"Converting {path} ...")
     wf, sr = torchaudio.load(path)
-    wf = resample(wf, sr, 16000)
+    wf = resample(wf, sr, 24000)
     wf = wf.mean(dim=0, keepdim=True)
     if args.no_chunking:
         wf = convertor.convert(wf.to(device), tgt, args.pitch_shift, alpha=args.alpha,
@@ -84,6 +84,5 @@ for i, path in enumerate(paths):
             results.append(converted_chunk.cpu())
         wf = torch.cat(results, dim=1)
         wf = wf[:, (left_shift):]
-    wf = resample(wf, 16000, sr)
     file_name = f"{os.path.splitext(os.path.basename(path))[0]}"
-    torchaudio.save(os.path.join(args.outputs, f"{file_name}.wav"), src=wf, sample_rate=sr)
+    torchaudio.save(os.path.join(args.outputs, f"{file_name}.wav"), src=wf, sample_rate=24000)

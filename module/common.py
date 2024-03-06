@@ -23,8 +23,8 @@ def spectrogram(wave, n_fft, hop_size):
 # wave: [BatchSize, 1, Length]
 # Output: [BatchSize, 1, Frames]
 def energy(wave,
-           frame_size=320):
-    return F.max_pool1d((wave ** 2).unsqueeze(1), frame_size)
+           frame_size=480):
+    return F.max_pool1d((wave.abs()).unsqueeze(1), frame_size)
 
 
 # Convert style based kNN.
@@ -72,12 +72,11 @@ def match_features(source, reference, k=4, alpha=0.0, metrics='cos'):
 # length = Frames * frame_size
 def oscillate_harmonics(f0,
                         phase=0,
-                        frame_size=320,
-                        sample_rate=16000,
+                        frame_size=480,
+                        sample_rate=24000,
                         num_harmonics=0,
                         begin_point=0,
-                        min_frequency=10.0,
-                        noise_scale=0.1):
+                        min_frequency=10.0):
     N = f0.shape[0]
     Nh = num_harmonics + 1
     Lf = f0.shape[2]
@@ -90,17 +89,18 @@ def oscillate_harmonics(f0,
     fs = f0 * mul
 
     # change length to wave's
-    fs = F.interpolate(fs, Lw)
+    fs = F.interpolate(fs, Lw, mode='linear')
+
+    # unvoiced / voiced mask
+    uv = F.interpolate((fs >= min_frequency).to(torch.float), Lw, mode='linear')
 
     # generate harmonics
     I = torch.cumsum(fs / sample_rate, dim=2) # numerical integration
     I = I - I[:, :, begin_point].unsqueeze(2)
     phi = (I + phase) % 1 # new phase
     theta = 2 * math.pi * phi # convert to radians
-    harmonics = torch.sin(theta)
 
-    # add noise
-    harmonics += torch.randn_like(harmonics) * noise_scale
+    harmonics = torch.sin(theta) * uv
 
     return harmonics, phi
 
@@ -145,7 +145,7 @@ class ChannelNorm(nn.Module):
 class ResBlock(nn.Module):
     def __init__(self, channels, kernel_size=7, dilation=1, mlp_mul=1, norm=False, negative_slope=0.1):
         super().__init__()
-        self.c1 = DCC(channels, channels, kernel_size, dilation, channels)
+        self.c1 = DCC(channels, channels, kernel_size, dilation)
         self.norm = ChannelNorm(channels) if norm else nn.Identity()
         self.c2 = nn.Conv1d(channels, channels * mlp_mul, 1)
         self.c3 = nn.Conv1d(channels * mlp_mul, channels, 1)
@@ -161,7 +161,7 @@ class ResBlock(nn.Module):
         return x + res
 
 
-def compute_f0_dio(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=20000):
+def compute_f0_dio(wf, sample_rate=24000, segment_size=480, f0_min=20, f0_max=20000):
     if wf.ndim == 1:
         device = wf.device
         signal = wf.detach().cpu().numpy()
@@ -181,7 +181,7 @@ def compute_f0_dio(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=20
         return pitchs
 
 
-def compute_f0_harvest(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_max=20000):
+def compute_f0_harvest(wf, sample_rate=24000, segment_size=480, f0_min=20, f0_max=20000):
     if wf.ndim == 1:
         device = wf.device
         signal = wf.detach().cpu().numpy()
@@ -200,7 +200,7 @@ def compute_f0_harvest(wf, sample_rate=16000, segment_size=320, f0_min=20, f0_ma
         return pitchs
 
 
-def compute_f0(wf, sample_rate=16000, segment_size=320, algorithm='harvest'):
+def compute_f0(wf, sample_rate=24000, segment_size=480, algorithm='harvest'):
     l = wf.shape[1]
     wf = resample(wf, sample_rate, 16000)
     if algorithm == 'harvest':

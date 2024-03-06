@@ -34,7 +34,7 @@ CE.load_state_dict(torch.load(args.content_encoder_path, map_location=device))
 features = []
 total_length = 0
 
-ds = WaveFileDirectory([args.dataset], length=16000)
+ds = WaveFileDirectory([args.dataset], length=24000)
 dl = torch.utils.data.DataLoader(ds, batch_size=1, shuffle=True)
 
 print("Extracting...")

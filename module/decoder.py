@@ -5,29 +5,6 @@ import torch.nn.functional as F
 from .common import DCC, oscillate_harmonics
 
 
-class Pitch2Vec(nn.Module):
-    def __init__(self, cond_channels):
-        super().__init__()
-        self.c1 = nn.Conv1d(1, cond_channels, 1, 1, 0)
-        self.c2 = nn.Conv1d(cond_channels, cond_channels, 1, 1, 0)
-        torch.nn.init.normal_(self.c1.weight, mean=0.0, std=30.0)
-
-    def forward(self, x):
-        x = self.c1(x)
-        x = torch.sin(x)
-        x = self.c2(x)
-        return x
-
-
-class Energy2Vec(nn.Module):
-    def __init__(self, cond_channels):
-        super().__init__()
-        self.c1 = nn.Conv1d(1, cond_channels, 1, 1, 0)
-
-    def forward(self, x):
-        return self.c1(x)
-
-
 class FiLM(nn.Module):
     def __init__(self, channels, cond_channels):
         super().__init__()
@@ -47,13 +24,14 @@ class Downsample(nn.Module):
         self.negative_slope = negative_slope
         self.factor = factor
 
+        self.pool = nn.AvgPool1d(factor)
         self.down_res = nn.Conv1d(input_channels, output_channels, 1)
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 2)
         self.c3 = DCC(input_channels, output_channels, 3, 4)
 
     def forward(self, x):
-        x = F.interpolate(x, scale_factor=1/self.factor, mode='linear')
+        x = self.pool(x)
         res = self.down_res(x)
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
@@ -69,28 +47,31 @@ class Upsample(nn.Module):
         super().__init__()
         self.negative_slope = negative_slope
         self.factor = factor
-        
-        self.film = FiLM(input_channels, cond_channels)
+
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 3)
+        self.film1 = FiLM(input_channels, cond_channels)
         self.c3 = DCC(input_channels, input_channels, 3, 9)
         self.c4 = DCC(input_channels, input_channels, 3, 27)
+        self.film2 = FiLM(input_channels, cond_channels)
         self.c5 = DCC(input_channels, output_channels, 3, 1)
 
     def forward(self, x, c):
-        x = self.film(x, c)
+        c = F.interpolate(c, scale_factor=self.factor, mode='linear')
         x = F.interpolate(x, scale_factor=self.factor, mode='linear')
         res = x
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c1(x)
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c2(x)
+        x = self.film1(x, c)
         x = x + res
         res = x
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c3(x)
         x = F.leaky_relu(x, self.negative_slope)
         x = self.c4(x)
+        x = self.film2(x, c)
         x = x + res
         x = self.c5(x)
         return x
@@ -99,12 +80,12 @@ class Upsample(nn.Module):
 class Decoder(nn.Module):
     def __init__(self,
                  channels=[256, 128, 64, 32],
-                 factors=[4, 4, 4, 5],
+                 factors=[4, 4, 5, 6],
                  cond_channels=[256, 128, 64, 32],
                  num_harmonics=0, # F0 sinewave only
                  content_channels=768,
-                 sample_rate=16000,
-                 frame_size=320,
+                 sample_rate=24000,
+                 frame_size=480,
                  ):
         super().__init__()
         self.num_harmonics = num_harmonics
@@ -113,7 +94,7 @@ class Decoder(nn.Module):
         self.content_channels = content_channels
 
         # initialize downsample layers
-        self.down_input = nn.Conv1d(num_harmonics + 1, cond_channels[-1], 1)
+        self.down_input = nn.Conv1d(num_harmonics + 2, cond_channels[-1], 1)
         self.downs = nn.ModuleList([])
         cond = list(reversed(cond_channels))
         cond_next = cond[1:] + [cond[-1]]
@@ -123,8 +104,9 @@ class Decoder(nn.Module):
 
         # initialize content input
         self.content_in = nn.Conv1d(content_channels, channels[0], 1)
-        self.p2v = Pitch2Vec(cond_channels[0])
-        self.e2v = Energy2Vec(cond_channels[0])
+        self.energy_in = nn.Conv1d(1, cond_channels[0], 1)
+        self.pitch_in = nn.Conv1d(1, cond_channels[0], 1)
+
         self.film_in = FiLM(channels[0], cond_channels[0])
 
         # initialize upsample layers
@@ -142,7 +124,12 @@ class Decoder(nn.Module):
         device = p.device
 
         # generate harmonics
-        source_signals, _ = oscillate_harmonics(p, 0, self.frame_size, self.sample_rate, self.num_harmonics)
+        harmonics, _ = oscillate_harmonics(p, 0, self.frame_size, self.sample_rate, self.num_harmonics)
+        # generate noise
+        noise = torch.randn(N, 1, L, device=device)
+        # concatenate
+        source_signals = torch.cat([harmonics, noise], dim=1)
+
         return source_signals
 
     def forward(self, x, p, e, source_signals):
@@ -154,7 +141,7 @@ class Decoder(nn.Module):
             skips.append(sines)
         
         # mid block
-        c = self.e2v(e) + self.p2v(p)
+        c = self.energy_in(e) + torch.sin(self.pitch_in(p))
         x = self.content_in(x)
         x = self.film_in(x, c)
 
