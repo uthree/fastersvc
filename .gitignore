@@ -180,3 +180,6 @@ cython_debug/
 
 # Backups
 backups/
+
+# Speaker infomation
+*.json

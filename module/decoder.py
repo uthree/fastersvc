@@ -19,9 +19,8 @@ class FiLM(nn.Module):
 
 
 class Downsample(nn.Module):
-    def __init__(self, input_channels, output_channels, factor=4, negative_slope=0.1):
+    def __init__(self, input_channels, output_channels, factor=4):
         super().__init__()
-        self.negative_slope = negative_slope
         self.factor = factor
 
         self.pool = nn.AvgPool1d(factor)
@@ -33,19 +32,18 @@ class Downsample(nn.Module):
     def forward(self, x):
         x = self.pool(x)
         res = self.down_res(x)
-        x = F.leaky_relu(x, self.negative_slope)
+        x = F.leaky_relu(x, 0.1)
         x = self.c1(x)
-        x = F.leaky_relu(x, self.negative_slope)
+        x = F.leaky_relu(x, 0.1)
         x = self.c2(x)
-        x = F.leaky_relu(x, self.negative_slope)
+        x = F.leaky_relu(x, 0.1)
         x = self.c3(x)
         return x + res
 
 
 class Upsample(nn.Module):
-    def __init__(self, input_channels, output_channels, cond_channels, factor=4, negative_slope=0.1):
+    def __init__(self, input_channels, output_channels, cond_channels, factor=4):
         super().__init__()
-        self.negative_slope = negative_slope
         self.factor = factor
 
         self.c1 = DCC(input_channels, input_channels, 3, 1)
@@ -60,16 +58,16 @@ class Upsample(nn.Module):
         c = F.interpolate(c, scale_factor=self.factor, mode='linear')
         x = F.interpolate(x, scale_factor=self.factor, mode='linear')
         res = x
-        x = F.leaky_relu(x, self.negative_slope)
+        x = F.leaky_relu(x, 0.1)
         x = self.c1(x)
-        x = F.leaky_relu(x, self.negative_slope)
+        x = F.leaky_relu(x, 0.1)
         x = self.c2(x)
         x = self.film1(x, c)
         x = x + res
         res = x
-        x = F.leaky_relu(x, self.negative_slope)
+        x = F.leaky_relu(x, 0.1)
         x = self.c3(x)
-        x = F.leaky_relu(x, self.negative_slope)
+        x = F.leaky_relu(x, 0.1)
         x = self.c4(x)
         x = self.film2(x, c)
         x = x + res

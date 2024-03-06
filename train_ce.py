@@ -10,13 +10,13 @@ from torchaudio.functional import resample
 
 from tqdm import tqdm
 
-from module.dataset import WaveFileDirectory
+from module.dataset import Dataset
 from module.content_encoder import ContentEncoder
 from transformers import HubertModel
 
 parser = argparse.ArgumentParser(description="distillation of hubert")
 
-parser.add_argument('dataset')
+parser.add_argument('--dataset-cache', default='dataset_cache')
 parser.add_argument('--hubert', default='rinna/japanese-hubert-base')
 parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
@@ -44,12 +44,7 @@ device = torch.device(args.device)
 
 CE = load_or_init_models(device)
 
-ds = WaveFileDirectory(
-        [args.dataset],
-        length=args.length,
-        max_files=args.max_data
-        )
-
+ds = Dataset(args.dataset_cache)
 dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
@@ -64,7 +59,7 @@ step_count = 0
 for epoch in range(args.epoch):
     tqdm.write(f"Epoch #{epoch}")
     bar = tqdm(total=len(ds))
-    for batch, wave in enumerate(dl):
+    for batch, (wave, f0, spk_id) in enumerate(dl):
         N = wave.shape[0]
         wave = wave.to(device)
 

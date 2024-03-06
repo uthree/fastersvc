@@ -8,7 +8,7 @@ import torch.optim as optim
 
 from tqdm import tqdm
 
-from module.dataset import WaveFileDirectory
+from module.dataset import Dataset
 from module.loss import LogMelSpectrogramLoss
 from module.pitch_estimator import PitchEstimator
 from module.content_encoder import ContentEncoder
@@ -19,7 +19,7 @@ from module.discriminator import Discriminator
 
 parser = argparse.ArgumentParser(description="train voice conversion model")
 
-parser.add_argument('dataset')
+parser.add_argument('--dataset-cache', default='dataset_cache')
 parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
 parser.add_argument('-pep', '--pitch-estimator-path', default='models/pitch_estimator.pt')
 parser.add_argument('-dip', '--discriminator-path', default='models/discriminator.pt')
@@ -74,12 +74,7 @@ PE.load_state_dict(torch.load(args.pitch_estimator_path, map_location=device))
 CE = ContentEncoder().to(device).eval()
 CE.load_state_dict(torch.load(args.content_encoder_path, map_location=device))
 
-ds = WaveFileDirectory(
-        [args.dataset],
-        length=args.length,
-        max_files=args.max_data
-        )
-
+ds = Dataset(args.dataset_cache)
 dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
@@ -95,19 +90,19 @@ step_count = 0
 for epoch in range(args.epoch):
     tqdm.write(f"Epoch #{epoch}")
     bar = tqdm(total=len(ds))
-    for batch, wave in enumerate(dl):
+    for batch, (wave, f0, spk_id) in enumerate(dl):
         N = wave.shape[0]
         
         # train generator and speaker encoder
         OptDec.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
             wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
+            f0 = f0.to(device)
 
             z = CE.encode(wave)
-            p = PE.estimate(wave)
             e = energy(wave)
             z = match_features(z, z).detach()
-            fake = Dec.synthesize(z, p, e)
+            fake = Dec.synthesize(z, f0, e)
 
             # remove nan
             fake[fake.isnan()] = 0

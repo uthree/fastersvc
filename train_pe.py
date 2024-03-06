@@ -9,12 +9,12 @@ import torchaudio
 
 from tqdm import tqdm
 
-from module.dataset import WaveFileDirectoryWithF0
+from module.dataset import Dataset
 from module.pitch_estimator import PitchEstimator
 
 parser = argparse.ArgumentParser(description="train pitch estimation")
 
-parser.add_argument('dataset')
+parser.add_argument('--dataset-cache', default='dataset_cache')
 parser.add_argument('-pep', '--pitch_estimator_path', default='models/pitch_estimator.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
@@ -43,13 +43,7 @@ def save_models(pe):
 device = torch.device(args.device)
 PE = load_or_init_models(device)
 
-ds = WaveFileDirectoryWithF0(
-        [args.dataset],
-        length=args.length,
-        max_files=args.max_data,
-        algorithm=args.algorithm
-        )
-
+ds = Dataset(args.dataset_cache)
 dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
@@ -66,7 +60,7 @@ step_count = 0
 for epoch in range(args.epoch):
     tqdm.write(f"Epoch #{epoch}")
     bar = tqdm(total=len(ds))
-    for batch, (wave, f0) in enumerate(dl):
+    for batch, (wave, f0, spk_id) in enumerate(dl):
         N = wave.shape[0]
         wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
         back_voice = wave.roll(1, dims=0)
