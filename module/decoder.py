@@ -75,12 +75,13 @@ class Upsample(nn.Module):
         return x
 
 
+
 class Decoder(nn.Module):
     def __init__(self,
-                 channels=[256, 128, 64, 32],
-                 factors=[4, 4, 5, 6],
-                 cond_channels=[256, 128, 64, 32],
-                 num_harmonics=0, # F0 sinewave only
+                 channels=[384, 192, 96, 48, 24],
+                 factors=[2, 3, 4, 4, 5],
+                 cond_channels=[384, 192, 96, 48, 24],
+                 num_harmonics=0, 
                  content_channels=768,
                  sample_rate=24000,
                  frame_size=480,
@@ -100,12 +101,10 @@ class Decoder(nn.Module):
             self.downs.append(
                     Downsample(c, c_n, f))
 
-        # initialize content input
         self.content_in = nn.Conv1d(content_channels, channels[0], 1)
         self.energy_in = nn.Conv1d(1, cond_channels[0], 1)
         self.pitch_in = nn.Conv1d(1, cond_channels[0], 1)
-
-        self.film_in = FiLM(channels[0], cond_channels[0])
+        self.film = FiLM(channels[0], cond_channels[0])
 
         # initialize upsample layers
         self.ups = nn.ModuleList([])
@@ -131,17 +130,17 @@ class Decoder(nn.Module):
         return source_signals
 
     def forward(self, x, p, e, source_signals):
+
         # downsamples
         skips = []
-        sines = self.down_input(source_signals)
+        src = self.down_input(source_signals)
         for d in self.downs:
-            sines = d(sines)
-            skips.append(sines)
-        
-        # mid block
-        c = self.energy_in(e) + torch.sin(self.pitch_in(p))
+            src = d(src)
+            skips.append(src)
+
         x = self.content_in(x)
-        x = self.film_in(x, c)
+        c = self.pitch_in(p) + self.energy_in(e)
+        x = self.film(x, c)
 
         # upsamples
         for u, s in zip(self.ups, reversed(skips)):
