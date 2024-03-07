@@ -8,7 +8,7 @@ import torch.optim as optim
 
 from tqdm import tqdm
 
-from module.dataset import WaveFileDirectory
+from module.dataset import Dataset
 from module.content_encoder import ContentEncoder
 
 def shuffle(tensor, dim):
@@ -18,7 +18,7 @@ def shuffle(tensor, dim):
 
 parser = argparse.ArgumentParser(description="extract index")
 
-parser.add_argument('dataset')
+parser.add_argument('--dataset-cache', default='dataset_cache')
 parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
 parser.add_argument('-size', default=1024, type=int)
 parser.add_argument('--stride', default=4, type=int)
@@ -34,7 +34,7 @@ CE.load_state_dict(torch.load(args.content_encoder_path, map_location=device))
 features = []
 total_length = 0
 
-ds = WaveFileDirectory([args.dataset], length=24000)
+ds = Dataset(args.dataset_cache)
 dl = torch.utils.data.DataLoader(ds, batch_size=1, shuffle=True)
 
 print("Extracting...")
