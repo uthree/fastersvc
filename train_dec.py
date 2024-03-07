@@ -33,8 +33,8 @@ parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('--save-interval', default=100, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
-parser.add_argument('--weight-adv', default=2.5, type=float)
-parser.add_argument('--weight-mel', default=1.0, type=float)
+parser.add_argument('--weight-adv', default=1.0, type=float)
+parser.add_argument('--weight-mel', default=45.0, type=float)
 
 args = parser.parse_args()
 
@@ -94,7 +94,8 @@ for epoch in range(args.epoch):
         # train generator and speaker encoder
         OptDec.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
-            wave = wave.to(device) * torch.rand(N, 1, device=device) * 2
+            wave = wave.to(device)
+            wave = (wave / wave.abs().max(dim=1, keepdim=True).values) * torch.rand(N, 1, device=device)
             f0 = f0.to(device)
 
             z = CE.encode(wave)
@@ -116,6 +117,7 @@ for epoch in range(args.epoch):
             loss_g = loss_adv * WEIGHT_ADV + loss_mel * WEIGHT_MEL
 
         scaler.scale(loss_g).backward()
+        nn.utils.clip_grad_norm_(Dec.parameters(), 1.0)
         scaler.step(OptDec)
 
         # train discriminator
@@ -133,6 +135,7 @@ for epoch in range(args.epoch):
                 loss_d += ((logit - 1) ** 2).mean() / len(logits)
 
         scaler.scale(loss_d).backward()
+        nn.utils.clip_grad_norm_(Dis.parameters(), 1.0)
         scaler.step(OptDis)
 
         scaler.update()
