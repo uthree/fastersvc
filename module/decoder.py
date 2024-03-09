@@ -23,14 +23,13 @@ class Downsample(nn.Module):
         super().__init__()
         self.factor = factor
 
-        self.pool = nn.AvgPool1d(factor)
         self.down_res = nn.Conv1d(input_channels, output_channels, 1)
         self.c1 = DCC(input_channels, input_channels, 3, 1)
         self.c2 = DCC(input_channels, input_channels, 3, 2)
         self.c3 = DCC(input_channels, output_channels, 3, 4)
+        self.pool = nn.AvgPool1d(factor)
 
     def forward(self, x):
-        x = self.pool(x)
         res = self.down_res(x)
         x = F.leaky_relu(x, 0.1)
         x = self.c1(x)
@@ -38,7 +37,9 @@ class Downsample(nn.Module):
         x = self.c2(x)
         x = F.leaky_relu(x, 0.1)
         x = self.c3(x)
-        return x + res
+        x = x + res
+        x = self.pool(x)
+        return x
 
 
 class Upsample(nn.Module):

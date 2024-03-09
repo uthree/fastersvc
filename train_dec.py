@@ -9,7 +9,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from module.dataset import Dataset
-from module.loss import LogMelSpectrogramLoss
+from module.loss import MultiScaleSTFTLoss
 from module.pitch_estimator import PitchEstimator
 from module.content_encoder import ContentEncoder
 from module.decoder import Decoder
@@ -28,18 +28,16 @@ parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
 parser.add_argument('-e', '--epoch', default=60, type=int)
 parser.add_argument('-b', '--batch-size', default=16, type=int)
-parser.add_argument('-len', '--length', default=24000, type=int)
-parser.add_argument('-m', '--max-data', default=-1, type=int)
 parser.add_argument('--save-interval', default=100, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
 parser.add_argument('--weight-adv', default=1.0, type=float)
-parser.add_argument('--weight-mel', default=45.0, type=float)
+parser.add_argument('--weight-stft', default=45.0, type=float)
 
 args = parser.parse_args()
 
 WEIGHT_ADV = args.weight_adv
-WEIGHT_MEL = args.weight_mel
+WEIGHT_STFT = args.weight_stft
 
 def load_or_init_models(device=torch.device('cpu')):
     dec = Decoder().to(device)
@@ -80,7 +78,7 @@ scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 
-logmel_loss = LogMelSpectrogramLoss().to(device)
+multiscale_stft_loss = MultiScaleSTFTLoss().to(device)
 
 # Training
 step_count = 0
@@ -103,9 +101,6 @@ for epoch in range(args.epoch):
             z = match_features(z, z).detach()
             fake = Dec.synthesize(z, f0, e)
 
-            # remove nan
-            fake[fake.isnan()] = 0
-
             loss_adv = 0
             loss_feat = 0
             logits, _ = Dis(center(fake))
@@ -113,8 +108,8 @@ for epoch in range(args.epoch):
                 logit[logit.isnan()] = 0
                 loss_adv += (logit ** 2).mean() / len(logits)
 
-            loss_mel = logmel_loss(fake, wave)
-            loss_g = loss_adv * WEIGHT_ADV + loss_mel * WEIGHT_MEL
+            loss_stft = multiscale_stft_loss(fake, wave)
+            loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT
 
         scaler.scale(loss_g).backward()
         nn.utils.clip_grad_norm_(Dec.parameters(), 1.0)
@@ -127,11 +122,9 @@ for epoch in range(args.epoch):
             loss_d = 0
             logits, _ = Dis(center(wave))
             for logit in logits:
-                logit[logit.isnan()] = 0
                 loss_d += (logit ** 2).mean() / len(logits)
             logits, _ = Dis(center(fake))
             for logit in logits:
-                logit[logit.isnan()] = 1
                 loss_d += ((logit - 1) ** 2).mean() / len(logits)
 
         scaler.scale(loss_d).backward()
@@ -142,7 +135,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
         
-        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, Mel.: {loss_mel.item():.4f}")
+        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT.: {loss_stft.item():.4f}")
 
         bar.update(N)
 

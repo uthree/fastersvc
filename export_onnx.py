@@ -54,10 +54,11 @@ torch.onnx.export(
 print("Exporting Decoder")
 content_channels = convertor.decoder.content_channels
 frames_per_second = convertor.decoder.sample_rate // convertor.decoder.frame_size
+num_harmonics = convertor.decoder.num_harmonics
 z = torch.randn(1, content_channels, frames_per_second) # content
 p = torch.randn(1, 1, frames_per_second) # pitch
 e = torch.randn(1, 1, frames_per_second) # energy
-src = torch.randn(1, 1, convertor.decoder.sample_rate) # source signal
+src = torch.randn(1, num_harmonics + 2, convertor.decoder.sample_rate) # source signal
 torch.onnx.export(
         convertor.decoder,
         (z, p, e, src),
