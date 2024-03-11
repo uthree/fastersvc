@@ -23,16 +23,18 @@ parser.add_argument('--dataset-cache', default='dataset_cache')
 parser.add_argument('-cep', '--content-encoder-path', default='models/content_encoder.pt')
 parser.add_argument('-pep', '--pitch-estimator-path', default='models/pitch_estimator.pt')
 parser.add_argument('-dip', '--discriminator-path', default='models/discriminator.pt')
+parser.add_argument('-step', '--max-steps', default=300000, type=int)
+parser.add_argument('-join-d', '--discriminator-join-steps', default=100000, type=int)
 parser.add_argument('-dep', '--decoder-path', default='models/decoder.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
-parser.add_argument('-e', '--epoch', default=60, type=int)
+parser.add_argument('-e', '--epoch', default=10000, type=int)
 parser.add_argument('-b', '--batch-size', default=16, type=int)
 parser.add_argument('--save-interval', default=100, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
-parser.add_argument('--weight-adv', default=1.0, type=float)
-parser.add_argument('--weight-stft', default=45.0, type=float)
+parser.add_argument('--weight-adv', default=2.5, type=float)
+parser.add_argument('--weight-stft', default=1.0, type=float)
 
 args = parser.parse_args()
 
@@ -88,7 +90,8 @@ for epoch in range(args.epoch):
     bar = tqdm(total=len(ds))
     for batch, (wave, f0, spk_id) in enumerate(dl):
         N = wave.shape[0]
-        
+        discriminator_join = step_count > args.discriminator_join_steps
+
         # train generator and speaker encoder
         OptDec.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
@@ -103,48 +106,57 @@ for epoch in range(args.epoch):
 
             fake[fake.isnan()] = 0
             fake[fake.isinf()] = 0
-            fake = fake.clamp(-1.0, 1.0)
-
-            loss_adv = 0
-            loss_feat = 0
-            logits, _ = Dis(center(fake))
-            for logit in logits:
-                logit[logit.isnan()] = 0
-                loss_adv += (logit ** 2).mean() / len(logits)
 
             loss_stft = multiscale_stft_loss(fake, wave)
-            loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT
+
+            if discriminator_join:
+                loss_adv = 0
+                logits, _ = Dis(center(fake))
+                for logit in logits:
+                    logit[logit.isnan()] = 0
+                    loss_adv += (logit ** 2).mean() / len(logits)
+                loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT
+            else:
+                loss_g = loss_stft
 
         scaler.scale(loss_g).backward()
         nn.utils.clip_grad_norm_(Dec.parameters(), 1.0)
         scaler.step(OptDec)
+        
+        if discriminator_join:
+            # train discriminator
+            fake = fake.detach()
+            fake = fake.clamp(-1.0, 1.0)
 
-        # train discriminator
-        fake = fake.detach()
-        OptDis.zero_grad()
-        with torch.cuda.amp.autocast(enabled=args.fp16):
-            loss_d = 0
-            logits, _ = Dis(center(wave))
-            for logit in logits:
-                loss_d += (logit ** 2).mean() / len(logits)
-            logits, _ = Dis(center(fake))
-            for logit in logits:
-                loss_d += ((logit - 1) ** 2).mean() / len(logits)
+            OptDis.zero_grad()
+            with torch.cuda.amp.autocast(enabled=args.fp16):
+                loss_d = 0
+                logits, _ = Dis(center(wave))
+                for logit in logits:
+                    loss_d += (logit ** 2).mean() / len(logits)
+                logits, _ = Dis(center(fake))
+                for logit in logits:
+                    loss_d += ((logit - 1) ** 2).mean() / len(logits)
 
-        scaler.scale(loss_d).backward()
-        nn.utils.clip_grad_norm_(Dis.parameters(), 1.0)
-        scaler.step(OptDis)
+            scaler.scale(loss_d).backward()
+            nn.utils.clip_grad_norm_(Dis.parameters(), 1.0)
+            scaler.step(OptDis)
 
         scaler.update()
 
         step_count += 1
         
-        tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT.: {loss_stft.item():.4f}")
-
+        if discriminator_join:
+            tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT.: {loss_stft.item():.4f}")
+        else:
+            tqdm.write(f"Epoch {epoch}, Step {step_count}, STFT.: {loss_stft.item():.4f}")
+            
         bar.update(N)
 
         if batch % args.save_interval == 0:
             save_models(Dec, Dis)
+    if step_count >= args.max_steps:
+        break
 
 print("Training Complete!")
 save_models(Dec, Dis)
