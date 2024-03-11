@@ -22,9 +22,9 @@ parser.add_argument('-a', '--alpha', default=0, type=float)
 parser.add_argument('-idx', '--index', default='NONE')
 parser.add_argument('--normalize', default=False, type=bool)
 parser.add_argument('-pe', '--pitch-estimation', default='default', choices=['default', 'dio', 'harvest'])
-parser.add_argument('-c', '--chunk', default=24000, type=int) # should be n * 320
+parser.add_argument('-c', '--chunk', default=1920, type=int) # should be n * 480
 parser.add_argument('-nc', '--no-chunking', default=False, type=bool)
-parser.add_argument('-b', '--buffer', default=1, type=int)
+parser.add_argument('-b', '--buffer', default=4, type=int)
 
 args = parser.parse_args()
 

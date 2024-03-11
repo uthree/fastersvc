@@ -9,7 +9,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from module.dataset import Dataset
-from module.loss import MultiScaleSTFTLoss
+from module.loss import MultiScaleSTFTLoss, LogMelSpectrogramLoss
 from module.pitch_estimator import PitchEstimator
 from module.content_encoder import ContentEncoder
 from module.decoder import Decoder
@@ -81,6 +81,7 @@ OptDec = optim.AdamW(Dec.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 OptDis = optim.AdamW(Dis.parameters(), lr=args.learning_rate, betas=(0.8, 0.99))
 
 multiscale_stft_loss = MultiScaleSTFTLoss().to(device)
+logmel_loss = LogMelSpectrogramLoss().to(device)
 
 # Training
 step_count = 0
@@ -107,7 +108,7 @@ for epoch in range(args.epoch):
             fake[fake.isnan()] = 0
             fake[fake.isinf()] = 0
 
-            loss_stft = multiscale_stft_loss(fake, wave)
+            loss_mel = logmel_loss(fake, wave)
 
             if discriminator_join:
                 loss_adv = 0
@@ -115,9 +116,9 @@ for epoch in range(args.epoch):
                 for logit in logits:
                     logit[logit.isnan()] = 0
                     loss_adv += (logit ** 2).mean() / len(logits)
-                loss_g = loss_adv * WEIGHT_ADV + loss_stft * WEIGHT_STFT
+                loss_g = loss_adv * WEIGHT_ADV + loss_mel * WEIGHT_STFT
             else:
-                loss_g = loss_stft
+                loss_g = loss_mel
 
         scaler.scale(loss_g).backward()
         nn.utils.clip_grad_norm_(Dec.parameters(), 1.0)
@@ -147,9 +148,9 @@ for epoch in range(args.epoch):
         step_count += 1
         
         if discriminator_join:
-            tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, STFT.: {loss_stft.item():.4f}")
+            tqdm.write(f"Epoch {epoch}, Step {step_count}, Dis.: {loss_d.item():.4f}, Adv.: {loss_adv.item():.4f}, Mel.: {loss_mel.item():.4f}")
         else:
-            tqdm.write(f"Epoch {epoch}, Step {step_count}, STFT.: {loss_stft.item():.4f}")
+            tqdm.write(f"Epoch {epoch}, Step {step_count}, Mel.: {loss_mel.item():.4f}")
             
         bar.update(N)
 

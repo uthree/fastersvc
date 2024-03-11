@@ -49,9 +49,9 @@ class Convertor(nn.Module):
     # initialize buffer for realtime inferencing
     @torch.inference_mode()
     def init_buffer(self, buffer_size, device='cpu'):
-        audio_buffer = torch.zeros(1, buffer_size, device=device)
-        phase_buffer = torch.zeros(1, self.num_harmonics + 1, 1, device=device)
-        return audio_buffer, phase_buffer
+        input_buffer = torch.zeros(1, buffer_size, device=device)
+        output_buffer = torch.zeros(1, buffer_size, device=device)
+        return input_buffer, output_buffer
     
     # convert voice with buffer for realtime inferencing
     @torch.inference_mode()
@@ -61,14 +61,14 @@ class Convertor(nn.Module):
         k = int(k)
 
         # extpand buffer variables
-        audio_buffer, phase_buffer = buffer
+        input_buffer, output_buffer = buffer
 
         # buffer size and chunk size
-        buffer_size = audio_buffer.shape[1]
+        buffer_size = input_buffer.shape[1]
         chunk_size = chunk.shape[1]
 
         # concateante audio buffer and chunk
-        x = torch.cat([audio_buffer, chunk], dim=1)
+        x = torch.cat([input_buffer, chunk], dim=1)
         waveform_length = x.shape[1]
 
         # encode content, estimate energy, estimate pitch
@@ -88,27 +88,33 @@ class Convertor(nn.Module):
         p = 440 * 2 ** (scale / 12)
 
         # oscillate harmonics and noise
-        harmonics, phase_out = oscillate_harmonics(
+        harmonics, _ = oscillate_harmonics(
                 p,
-                phase_buffer,
+                0,
                 self.frame_size,
                 self.sample_rate,
-                self.num_harmonics,
-                begin_point=buffer_size-1)
+                self.num_harmonics)
 
         noise = torch.randn(N, 1, waveform_length, device=device)
 
         src = torch.cat([harmonics, noise], dim=1)
 
-        # calculate next phase buffer
-        new_phase_buffer = phase_out[:, :, -1].unsqueeze(2)
-        
         # synthesize new voice
         y = self.decoder(z, p, e, src)
 
-        # return new voice and shift left
-        left_shift = self.frame_size * 3
-        audio_out = y[:, buffer_size-left_shift:-left_shift]
-        new_audio_buffer = x[:, -buffer_size:]
+        # cross fade (linear interpolation)
+        y_hat = torch.cat([output_buffer, torch.zeros(N, chunk_size, device=device)], dim=1)
+        alpha = torch.cat([
+            torch.zeros(buffer_size - 3 * chunk_size),
+            torch.linspace(0, 1.0, chunk_size),
+            torch.ones(chunk_size * 3),
+            ]).to(device).unsqueeze(0)
+        alpha = alpha.expand(N, alpha.shape[1])
+        new_output_buffer = y_hat * (1-alpha) + y * alpha
 
-        return audio_out, (new_audio_buffer, new_phase_buffer)
+        left_shift = chunk_size * 3
+        out_signal = new_output_buffer[:, -chunk_size-left_shift:-left_shift]
+
+        new_output_buffer = new_output_buffer[:, -buffer_size:]
+        new_input_buffer = x[:, -buffer_size:]
+        return out_signal, (new_input_buffer, new_output_buffer)
