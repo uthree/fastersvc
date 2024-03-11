@@ -38,36 +38,45 @@ Train a model for basic voice conversion. At this stage, the model is not specia
 
 Here are the steps:
 
-1. Train pitch estimator.
+1. Preprocess.
+```sh
+python3 preprocess.py <Dataset directory>
+```
+
+2. Train pitch estimator.
 Distill pitch estimation using a fast and parallelizable 1D CNN with the harvest algorithm from WORLD.
 ```sh
-python3 train_pe.py <dataset path>
+python3 train_pe.py
 ```
 
-2. Train content encoder
+3. Train content encoder
 Distill HuBERT-base. According to the WavLM paper, the 4th, 9th layer contains speaker information and phoneme infomation, so it is distilled. (Speaker classification can be performed using linear transformation from the features in the fourth layer.)
 ```sh
-python3 train_ce.py <dataset path>
+python3 train_ce.py
 ```
 
-3. Train decoder
+4. Train decoder
 The goal of the decoder is to reconstruct the original waveform from pitch and content.
 
 sh
 ```sh
-python3 train_dec.py <datset.path>
+python3 train_dec.py
 ```
 
 ## Fine-tuning
 By adjusting the pre-trained model to a model specialized for conversion to a specific speaker, it is possible to create a more accurate model. This process takes much less time than pre-learning.
-1. Combine only the audio files of a specific speaker into one folder.
+1. Combine only the audio files of a specific speaker into one folder, and preprocess.
+```sh
+python3 preorpcess.py <Dataset directory>
+```
+
 2. Fine tune the decoder.
 ```sh
-python3 train_dec.py <Folder containing only audio files of a specific speaker>
+python3 train_dec.py
 ````
 3. Create a dictionary for vector search. This eliminates the need to encode audio files each time.
 ```sh
-python3 extract_index.py <Folder containing only audio files of a specific speaker> -o <Dictionary output destination (optional)>
+python3 extract_index.py -o <Dictionary output destination (optional)>
 ```
 4. When inferring, you can load arbitrary dictionary data by adding the `-idx <dictionary file>` option.
 
