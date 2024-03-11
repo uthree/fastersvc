@@ -28,6 +28,12 @@ class MultiScaleSTFTLoss(nn.Module):
             window = torch.hann_window(n_fft, device=x.device)
             x_spec = torch.stft(x, n_fft, hop_length, return_complex=True, window=window).abs()
             y_spec = torch.stft(y, n_fft, hop_length, return_complex=True, window=window).abs()
+
+            x_spec[x_spec.isnan()] = 0
+            x_spec[x_spec.isinf()] = 0
+            y_spec[y_spec.isnan()] = 0
+            y_spec[y_spec.isinf()] = 0
+
             loss += ((x_spec - y_spec) ** 2).mean() + (safe_log(x_spec) - safe_log(y_spec)).abs().mean()
         return loss / num_scales
 

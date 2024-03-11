@@ -101,6 +101,10 @@ for epoch in range(args.epoch):
             z = match_features(z, z).detach()
             fake = Dec.synthesize(z, f0, e)
 
+            fake[fake.isnan()] = 0
+            fake[fake.isinf()] = 0
+            fake = fake.clamp(-1.0, 1.0)
+
             loss_adv = 0
             loss_feat = 0
             logits, _ = Dis(center(fake))
