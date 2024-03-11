@@ -115,6 +115,6 @@ class Convertor(nn.Module):
         left_shift = chunk_size * 3
         out_signal = new_output_buffer[:, -chunk_size-left_shift:-left_shift]
 
-        new_output_buffer = new_output_buffer[:, -buffer_size:]
+        new_output_buffer = y[:, -buffer_size:]
         new_input_buffer = x[:, -buffer_size:]
         return out_signal, (new_input_buffer, new_output_buffer)
