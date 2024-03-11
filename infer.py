@@ -83,6 +83,6 @@ for i, path in enumerate(paths):
                     )
             results.append(converted_chunk.cpu())
         wf = torch.cat(results, dim=1)
-        wf = wf[:, (left_shift):]
+        wf = wf[:, left_shift:]
     file_name = f"{os.path.splitext(os.path.basename(path))[0]}"
     torchaudio.save(os.path.join(args.outputs, f"{file_name}.wav"), src=wf, sample_rate=24000)
