@@ -47,7 +47,7 @@ dl = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=True)
 
 scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 
-Opt = optim.RAdam(CE.parameters(), lr=args.learning_rate)
+Opt = optim.AdamW(CE.parameters(), lr=args.learning_rate)
 
 hubert = HubertModel.from_pretrained(args.hubert).to(device).eval()
 
