@@ -38,7 +38,7 @@ ds = Dataset(args.dataset_cache)
 dl = torch.utils.data.DataLoader(ds, batch_size=1, shuffle=True)
 
 print("Extracting...")
-for i, wave in enumerate(dl):
+for i, (wave, f0, spk_id) in enumerate(dl):
     feat = CE.encode(wave.to(device)).cpu()[:, :, ::args.stride]
     total_length += feat.shape[2]
     features.append(feat)

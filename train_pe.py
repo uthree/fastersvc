@@ -48,7 +48,7 @@ scaler = torch.cuda.amp.GradScaler(enabled=args.fp16)
 Opt = optim.AdamW(PE.parameters(), lr=args.learning_rate)
 
 weight = torch.ones(PE.output_channels)
-weight[0] = 0.02
+weight[0] = 0.005
 CrossEntropy = nn.CrossEntropyLoss(weight).to(device)
 
 # Training
@@ -80,7 +80,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
 
-        tqdm.write(f"Step {step_count}, loss: {loss.item()}")
+        tqdm.write(f"Epoch: {epoch}, Step {step_count}, loss: {loss.item()}")
 
         bar.update(N)
 

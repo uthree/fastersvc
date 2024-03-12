@@ -14,7 +14,7 @@ from module.dataset import Dataset
 from module.content_encoder import ContentEncoder
 from transformers import HubertModel
 
-parser = argparse.ArgumentParser(description="distillation of hubert")
+parser = argparse.ArgumentParser(description="distillation of HuBERT")
 
 parser.add_argument('--dataset-cache', default='dataset_cache')
 parser.add_argument('--hubert', default='rinna/japanese-hubert-base')
@@ -63,15 +63,15 @@ for epoch in range(args.epoch):
 
         with torch.cuda.amp.autocast(enabled=args.fp16):
             with torch.no_grad():
-                h = hubert(wave, output_hidden_states=True).hidden_states
-                hubert_features = (h[4] + h[9]) * 0.5 # based https://arxiv.org/pdf/2110.13900.pdf Fig. 2
-                hubert_features = hubert_features.transpose(1, 2)
+                h = hubert(resample(wave, 24000, 16000), output_hidden_states=True).hidden_states
+                ssl_features = h[9] # based https://arxiv.org/pdf/2110.13900.pdf Fig. 2
+                ssl_features = ssl_features.transpose(1, 2)
 
         Opt.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.fp16):
             z = CE.encode(wave)
-            hubert_features = F.interpolate(hubert_features, z.shape[2])
-            loss = (z - hubert_features).abs().mean()
+            ssl_features = F.interpolate(ssl_features, z.shape[2])
+            loss = (z - ssl_features).abs().mean()
 
         scaler.scale(loss).backward()
         scaler.step(Opt)
@@ -80,7 +80,7 @@ for epoch in range(args.epoch):
 
         step_count += 1
 
-        tqdm.write(f"Step {step_count}, loss: {loss.item()}")
+        tqdm.write(f"Epoch: {epoch}, Step {step_count}, loss: {loss.item()}")
 
         bar.update(N)
 

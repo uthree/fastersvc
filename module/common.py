@@ -49,11 +49,12 @@ def match_features(source, reference, k=4, alpha=0.0, metrics='cos'):
     elif metrics == 'cos':
         reference_norm = torch.norm(reference, dim=2, keepdim=True) + 1e-6
         source_norm = torch.norm(source, dim=2, keepdim=True) + 1e-6
-        sims = torch.bmm(source / source_norm, (reference / reference_norm).transpose(1, 2))
+        sims = -torch.cdist(source / source_norm, (reference / reference_norm))
     best = torch.topk(sims, k, dim=2)
 
     result = torch.stack([reference[n][best.indices[n]] for n in range(source.shape[0])], dim=0).mean(dim=2)
     result = result.transpose(1, 2)
+
     return result * (1-alpha) + input_data * alpha
 
 
@@ -127,7 +128,7 @@ class DCC(nn.Module):
         return x
 
 
-class ChannelNorm(nn.Module):
+class LayerNorm(nn.Module):
     def __init__(self, channels, eps=1e-4):
         super().__init__()
         self.scale = nn.Parameter(torch.ones(1, channels, 1))
@@ -135,8 +136,8 @@ class ChannelNorm(nn.Module):
         self.eps = eps
 
     def forward(self, x):
-        mu = x.mean(dim=1, keepdim=True)
-        sigma = x.std(dim=1, keepdim=True) + self.eps
+        mu = x.mean(dim=(1, 2), keepdim=True)
+        sigma = x.std(dim=(1, 2), keepdim=True) + self.eps
         x = (x - mu) / sigma
         x = x * self.scale + self.shift
         return x
@@ -146,7 +147,7 @@ class ResBlock(nn.Module):
     def __init__(self, channels, kernel_size=7, dilation=1, mlp_mul=1, norm=False, negative_slope=0.1):
         super().__init__()
         self.c1 = DCC(channels, channels, kernel_size, dilation)
-        self.norm = ChannelNorm(channels) if norm else nn.Identity()
+        self.norm = LayerNorm(channels) if norm else nn.Identity()
         self.c2 = nn.Conv1d(channels, channels * mlp_mul, 1)
         self.c3 = nn.Conv1d(channels * mlp_mul, channels, 1)
         self.negative_slope = negative_slope

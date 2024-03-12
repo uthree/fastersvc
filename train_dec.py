@@ -24,7 +24,7 @@ parser.add_argument('-cep', '--content-encoder-path', default='models/content_en
 parser.add_argument('-pep', '--pitch-estimator-path', default='models/pitch_estimator.pt')
 parser.add_argument('-dip', '--discriminator-path', default='models/discriminator.pt')
 parser.add_argument('-step', '--max-steps', default=300000, type=int)
-parser.add_argument('-join-d', '--discriminator-join-steps', default=100000, type=int)
+parser.add_argument('-d-join', '--discriminator-join-steps', default=100000, type=int)
 parser.add_argument('-dep', '--decoder-path', default='models/decoder.pt')
 parser.add_argument('-lr', '--learning-rate', type=float, default=1e-4)
 parser.add_argument('-d', '--device', default='cuda')
@@ -33,8 +33,8 @@ parser.add_argument('-b', '--batch-size', default=16, type=int)
 parser.add_argument('--save-interval', default=100, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
-parser.add_argument('--weight-adv', default=2.5, type=float)
-parser.add_argument('--weight-stft', default=1.0, type=float)
+parser.add_argument('--weight-adv', default=1.0, type=float)
+parser.add_argument('--weight-stft', default=2.5, type=float)
 
 args = parser.parse_args()
 
@@ -58,7 +58,7 @@ def save_models(dec, dis):
     print("Complete!")
 
 
-def center(wave, length=16000):
+def center(wave, length=10000):
     c = wave.shape[1] // 2
     half_len = length // 2
     return wave[:, c-half_len:c+half_len]
@@ -91,7 +91,7 @@ for epoch in range(args.epoch):
     bar = tqdm(total=len(ds))
     for batch, (wave, f0, spk_id) in enumerate(dl):
         N = wave.shape[0]
-        discriminator_join = step_count > args.discriminator_join_steps
+        discriminator_join = step_count >= args.discriminator_join_steps
 
         # train generator and speaker encoder
         OptDec.zero_grad()
@@ -99,9 +99,9 @@ for epoch in range(args.epoch):
             wave = wave.to(device)
             wave = (wave / wave.abs().max(dim=1, keepdim=True).values) * torch.rand(N, 1, device=device)
             f0 = f0.to(device)
+            e = energy(wave)
 
             z = CE.encode(wave)
-            e = energy(wave)
             z = match_features(z, z).detach()
             fake = Dec.synthesize(z, f0, e)
 
