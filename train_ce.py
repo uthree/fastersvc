@@ -64,7 +64,7 @@ for epoch in range(args.epoch):
         with torch.cuda.amp.autocast(enabled=args.fp16):
             with torch.no_grad():
                 h = hubert(resample(wave, 24000, 16000), output_hidden_states=True).hidden_states
-                ssl_features = h[9] # based https://arxiv.org/pdf/2110.13900.pdf Fig. 2
+                ssl_features = h[4] # based https://arxiv.org/pdf/2110.13900.pdf Fig. 2
                 ssl_features = ssl_features.transpose(1, 2)
 
         Opt.zero_grad()
