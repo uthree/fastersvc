@@ -26,9 +26,10 @@ class Convertor(nn.Module):
         self.content_encoder.load_state_dict(torch.load(os.path.join(path, 'content_encoder.pt'), map_location=device))
         self.decoder.load_state_dict(torch.load(os.path.join(path, 'decoder.pt'), map_location=device))
 
-    def encode_target(self, wave, stride=4):
+    def encode_target(self, wave, downsample_factor=4):
         tgt = self.content_encoder.encode(wave)
-        return tgt[:, :, ::stride]
+        tgt = F.avg_pool1d(tgt, downsample_factor)
+        return tgt
 
     # convert single waveform without buffering
     @torch.inference_mode()
