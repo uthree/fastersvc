@@ -34,12 +34,12 @@ parser.add_argument('--save-interval', default=100, type=int)
 parser.add_argument('-fp16', default=False, type=bool)
 
 parser.add_argument('--weight-adv', default=1.0, type=float)
-parser.add_argument('--weight-stft', default=2.5, type=float)
+parser.add_argument('--weight-mel', default=2.5, type=float)
 
 args = parser.parse_args()
 
 WEIGHT_ADV = args.weight_adv
-WEIGHT_STFT = args.weight_stft
+WEIGHT_MEL = args.weight_mel
 
 def load_or_init_models(device=torch.device('cpu')):
     dec = Decoder().to(device)
@@ -116,7 +116,7 @@ for epoch in range(args.epoch):
                 for logit in logits:
                     logit[logit.isnan()] = 0
                     loss_adv += (logit ** 2).mean() / len(logits)
-                loss_g = loss_adv * WEIGHT_ADV + loss_mel * WEIGHT_STFT
+                loss_g = loss_adv * WEIGHT_ADV + loss_mel * WEIGHT_MEL
             else:
                 loss_g = loss_mel
 

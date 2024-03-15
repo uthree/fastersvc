@@ -140,7 +140,7 @@ class Decoder(nn.Module):
             skips.append(src)
 
         x = self.content_in(x)
-        c = self.pitch_in(p) + self.energy_in(e)
+        c = self.pitch_in(torch.log(p.abs() + 1e-6)) + self.energy_in(e)
         x = self.film(x, c)
 
         # upsamples
