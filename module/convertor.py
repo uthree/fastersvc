@@ -106,14 +106,14 @@ class Convertor(nn.Module):
         # cross fade (linear interpolation)
         y_hat = torch.cat([output_buffer, torch.zeros(N, chunk_size, device=device)], dim=1)
         alpha = torch.cat([
-            torch.zeros(buffer_size - 3 * chunk_size),
+            torch.zeros(buffer_size - chunk_size),
             torch.linspace(0, 1.0, chunk_size),
-            torch.ones(chunk_size * 3),
+            torch.ones(chunk_size),
             ]).to(device).unsqueeze(0)
         alpha = alpha.expand(N, alpha.shape[1])
         new_output_buffer = y_hat * (1-alpha) + y * alpha
 
-        left_shift = chunk_size * 3
+        left_shift = chunk_size
         out_signal = new_output_buffer[:, -chunk_size-left_shift:-left_shift]
 
         new_output_buffer = y[:, -buffer_size:]
