@@ -179,7 +179,7 @@ cython_debug/
 *.pickle
 
 # Backups
-backups/
+backups/*
 
 # Speaker infomation
 *.json
