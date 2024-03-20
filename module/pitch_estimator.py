@@ -30,8 +30,12 @@ class PitchEstimator(nn.Module):
     @torch.no_grad()
     def estimate(self, wave):
         logits = self.forward(spectrogram(wave, self.n_fft, self.hop_size))
-        ids = torch.argmax(logits, dim=1, keepdim=True)
-        return self.id2freq(ids)
+        probs, indices = torch.topk(logits, 4, dim=1)
+        probs = F.softmax(probs, dim=1)
+        freqs = self.id2freq(indices)
+        f0 = (probs * freqs).sum(dim=1, keepdim=True)
+        f0[f0 <= self.f0_min] = 0
+        return f0
 
     def logits(self, wave):
         logits = self.forward(spectrogram(wave, self.n_fft, self.hop_size))
