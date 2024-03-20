@@ -70,10 +70,10 @@ class DiscriminatorS(nn.Module):
         super().__init__()
         norm_f = nn.utils.weight_norm if use_spectral_norm == False else nn.utils.spectral_norm
 
-        if scale != 1:
+        if scale == 1:
             self.pool = nn.Identity()
         else:
-            self.pool = nn.AvgPool1d(scale*2, scale)
+            self.pool = nn.AvgPool1d(scale)
 
         c = channels
         g = 1
